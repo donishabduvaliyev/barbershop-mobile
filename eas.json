@@ -14,7 +14,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-production-backend.com",
+        "EXPO_PUBLIC_BACKEND_URL": "https://barbershop-backend-1hf3.onrender.com",
+        "EXPO_PUBLIC_API_URL": "https://barbershop-backend-1hf3.onrender.com",
         "EXPO_PUBLIC_TELEGRAM_BOT_USERNAME": "SmartChairUzBot"
       }
     },
@@ -24,7 +25,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-production-backend.com",
+        "EXPO_PUBLIC_BACKEND_URL": "https://barbershop-backend-1hf3.onrender.com",
+        "EXPO_PUBLIC_API_URL": "https://barbershop-backend-1hf3.onrender.com",
         "EXPO_PUBLIC_TELEGRAM_BOT_USERNAME": "SmartChairUzBot"
       }
     }

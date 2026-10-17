@@ -37,8 +37,10 @@ export default function ShopDetailScreen() {
     (async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`${backEndUrl}/api/mobile/shops/shops/${id}`);
-        if (res.ok) {
+        const res = await fetch(`${backEndUrl}/api/mobile/shops/shops/${id}`)
+          .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/shops/${id}`)))
+          .catch(() => fetch(`${backEndUrl}/api/shops/shops/${id}`));
+        if (res && res.ok) {
           const data = await res.json();
           setShop(data);
         }

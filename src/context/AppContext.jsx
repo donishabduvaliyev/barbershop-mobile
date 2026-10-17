@@ -3,6 +3,7 @@ import { AppState, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
 import * as Haptics from 'expo-haptics';
+import Constants from 'expo-constants';
 import i18n from '../i18n';
 
 const AppContext = createContext();
@@ -13,10 +14,18 @@ const STORAGE_KEYS = {
   LANG: '@smartchair_mobile_lang',
 };
 
-// Default backend URL: Android Emulator maps 10.0.2.2 to host localhost:5000
+// Automatically detect local host IP when running on physical Android via Expo Go
+const getAutoHostIp = () => {
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoClient?.hostUri;
+  if (hostUri) {
+    return hostUri.split(':')[0];
+  }
+  return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+};
+
 const DEFAULT_BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL ||
-  (Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000');
+  'https://barbershop-backend-1hf3.onrender.com';
 
 export const AppProvider = ({ children }) => {
   const [backEndUrl] = useState(DEFAULT_BACKEND_URL);
@@ -116,14 +125,18 @@ export const AppProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const [allRes, feedRes] = await Promise.all([
-        fetch(`${backEndUrl}/api/mobile/shops/allShops`),
-        fetch(`${backEndUrl}/api/mobile/shops/home-feed`),
+        fetch(`${backEndUrl}/api/mobile/shops/allShops`)
+          .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/allShops`)))
+          .catch(() => fetch(`${backEndUrl}/api/shops/allShops`)),
+        fetch(`${backEndUrl}/api/mobile/shops/home-feed`)
+          .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/home-feed`)))
+          .catch(() => fetch(`${backEndUrl}/api/shops/home-feed`)),
       ]);
-      if (allRes.ok) {
+      if (allRes && allRes.ok) {
         const allData = await allRes.json();
         setShops(Array.isArray(allData) ? allData : []);
       }
-      if (feedRes.ok) {
+      if (feedRes && feedRes.ok) {
         const feed = await feedRes.json();
         setFeedData(Array.isArray(feed) ? feed : []);
       }

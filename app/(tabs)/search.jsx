@@ -42,12 +42,18 @@ export default function SearchScreen() {
     const timer = setTimeout(async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`${backEndUrl}/api/mobile/shops/discovery-search`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ searchTerm: searchTerm.trim() }),
-        });
-        if (!res.ok) return;
+        const fetchSearch = (prefix) =>
+          fetch(`${backEndUrl}${prefix}/discovery-search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ searchTerm: searchTerm.trim() }),
+          });
+
+        const res = await fetchSearch('/api/mobile/shops')
+          .then((r) => (r.ok ? r : fetchSearch('/api/shops')))
+          .catch(() => fetchSearch('/api/shops'));
+
+        if (!res || !res.ok) return;
         const data = await res.json();
         if (active) setDiscovery(data);
       } catch (err) {

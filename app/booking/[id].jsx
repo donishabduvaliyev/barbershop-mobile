@@ -106,8 +106,12 @@ export default function BookingScreen() {
     if (!id) return;
     try {
       const [shopRes, availRes] = await Promise.all([
-        fetch(`${backEndUrl}/api/mobile/shops/shops/${id}`),
-        fetch(`${backEndUrl}/api/mobile/shops/service/${id}/availability`),
+        fetch(`${backEndUrl}/api/mobile/shops/shops/${id}`)
+          .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/shops/${id}`)))
+          .catch(() => fetch(`${backEndUrl}/api/shops/shops/${id}`)),
+        fetch(`${backEndUrl}/api/mobile/shops/service/${id}/availability`)
+          .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/service/${id}/availability`)))
+          .catch(() => fetch(`${backEndUrl}/api/shops/service/${id}/availability`)),
       ]);
       if (shopRes.ok && availRes.ok) {
         const [shopData, availData] = await Promise.all([shopRes.json(), availRes.json()]);
@@ -262,24 +266,31 @@ export default function BookingScreen() {
       const shopName =
         shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
 
-      const res = await fetch(`${backEndUrl}/api/mobile/shops/booking-requests`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mobileToken}`,
-        },
-        body: JSON.stringify({
-          shopId: shop._id,
-          shopName,
-          userNumber: phone.trim(),
-          userTelegramNumber: userInfo?.phone || phone.trim(),
-          userName: name.trim() || userInfo?.name || 'Customer',
-          requestedTime: bookingDate.toISOString(),
-          staffId: selectedStaffId || undefined,
-          serviceId: selectedServiceId,
-          lang,
-        }),
+      const bookingPayload = JSON.stringify({
+        shopId: shop._id,
+        shopName,
+        userNumber: phone.trim(),
+        userTelegramNumber: userInfo?.phone || phone.trim(),
+        userName: name.trim() || userInfo?.name || 'Customer',
+        requestedTime: bookingDate.toISOString(),
+        staffId: selectedStaffId || undefined,
+        serviceId: selectedServiceId,
+        lang,
       });
+
+      const postBooking = (prefix) =>
+        fetch(`${backEndUrl}${prefix}/booking-requests`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mobileToken}`,
+          },
+          body: bookingPayload,
+        });
+
+      const res = await postBooking('/api/mobile/shops')
+        .then((r) => (r.ok ? r : postBooking('/api/shops')))
+        .catch(() => postBooking('/api/shops'));
 
       const data = await res.json();
       if (!res.ok) {
