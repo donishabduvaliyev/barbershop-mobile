@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "SmartChair",
+    "slug": "smartchair-mobile",
+    "version": "1.0.0",
+    "orientation": "default",
+    "scheme": "smartchair",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0B0F17"
+    },
+    "android": {
+      "package": "uz.smartchair.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F17"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "uz.smartchair.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SmartChair uses your location to show nearby barbershops and salons on the map."
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SmartChair to use your location to find nearby barbershops."
+        }
+      ]
+    ]
+  }
+}
