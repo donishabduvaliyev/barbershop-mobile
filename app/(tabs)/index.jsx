@@ -2,11 +2,11 @@ import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   RefreshControl,
   StyleSheet,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,10 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { ShopCard } from '../../src/components/ShopCard';
+import { MOTION_ASSETS, SmartChairLogoMark } from '../../src/components/BrandAssets';
+import { HomeFeedSkeleton } from '../../src/components/Skeletons';
 
 const CATEGORIES = [
   { key: 'All', icon: 'grid-outline' },
@@ -73,21 +75,25 @@ export default function HomeScreen() {
         ]}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={isLoading && shops.length > 0}
             onRefresh={refreshShops}
             tintColor={COLORS.accent}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Bar: Brand + Live Sync Indicator + Language Switcher */}
+        {/* Top Bar: Official 2x2 Mark + Fraunces Wordmark + Live Sync + Language Switcher */}
         <Animated.View entering={FadeInDown.duration(350)} style={styles.headerRow}>
           <View style={styles.brandBlock}>
             <View style={styles.logoBadge}>
-              <Ionicons name="cut" size={18} color="#000" />
+              <SmartChairLogoMark size={28} />
             </View>
             <View>
-              <Text style={styles.brandName}>SmartChair</Text>
+              <Image
+                source={MOTION_ASSETS.logos.wordmarkOutlined}
+                style={styles.wordmarkImg}
+                resizeMode="contain"
+              />
               <View style={styles.syncRow}>
                 <View
                   style={[
@@ -125,7 +131,7 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* Hero Section */}
+        {/* Hero Section with Search Field styled after components/search-bar.svg */}
         <Animated.View entering={FadeInDown.delay(70).duration(400)} style={styles.heroCard}>
           <View style={styles.heroTextCol}>
             <Text style={styles.heroTitle}>
@@ -138,18 +144,22 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/search')}
             style={styles.searchBarTrigger}
           >
-            <Ionicons name="search" size={18} color={COLORS.accent} />
+            <Image
+              source={MOTION_ASSETS.icons.search}
+              style={{ width: 18, height: 18, tintColor: COLORS.accent }}
+              resizeMode="contain"
+            />
             <Text style={styles.searchBarPlaceholder} numberOfLines={1}>
               {t('SearchPlaceholder')}
             </Text>
             <View style={styles.boltPill}>
-              <Ionicons name="flash" size={13} color="#000" />
+              <Ionicons name="flash" size={12} color={COLORS.bg} />
               <Text style={styles.boltText}>{t('FindAvailableNow')}</Text>
             </View>
           </Pressable>
         </Animated.View>
 
-        {/* Category Filter Pills */}
+        {/* Category Filter Chips styled after components/chip-pill-on.svg & chip-pill-off.svg */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -165,8 +175,8 @@ export default function HomeScreen() {
               >
                 <Ionicons
                   name={cat.icon}
-                  size={16}
-                  color={active ? '#000' : COLORS.textMuted}
+                  size={15}
+                  color={active ? COLORS.bg : COLORS.textMuted}
                 />
                 <Text
                   style={[
@@ -181,11 +191,9 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* Responsive Multi-Column Grid for Phones & Tablets */}
+        {/* Shimmering Skeleton Grid while loading from server, then Animated Shop Grid */}
         {isLoading && shops.length === 0 ? (
-          <View style={styles.loaderBox}>
-            <ActivityIndicator size="large" color={COLORS.accent} />
-          </View>
+          <HomeFeedSkeleton numColumns={numColumns} />
         ) : (
           <View style={[styles.gridContainer, isTablet && styles.gridContainerTablet]}>
             {filteredShops.map((shop, idx) => (
@@ -227,18 +235,18 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoBadge: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandName: {
-    color: COLORS.text,
-    fontSize: 19,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+  wordmarkImg: {
+    width: 118,
+    height: 20,
   },
   syncRow: {
     flexDirection: 'row',
@@ -247,12 +255,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   syncDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   syncText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -266,8 +275,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 10,
     padding: 3,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   langBtn: {
     paddingHorizontal: 9,
@@ -279,33 +288,36 @@ const styles = StyleSheet.create({
   },
   langBtnText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyBold,
     fontSize: 12,
     fontWeight: '700',
   },
   langBtnTextActive: {
-    color: '#000',
+    color: COLORS.bg,
   },
   heroCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 22,
+    borderRadius: 18,
     padding: 18,
     marginTop: 8,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   heroTextCol: {
     marginBottom: 14,
   },
   heroTitle: {
     color: COLORS.text,
-    fontSize: 24,
-    fontWeight: '800',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 23,
+    fontWeight: '600',
     marginBottom: 4,
   },
   heroSubtitle: {
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
   },
   searchBarTrigger: {
     backgroundColor: COLORS.surface2,
@@ -315,12 +327,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   searchBarPlaceholder: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.textFaint,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
     flex: 1,
   },
   boltPill: {
@@ -333,7 +346,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   boltText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -345,12 +359,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surface2,
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   categoryPillActive: {
     backgroundColor: COLORS.accent,
@@ -358,16 +372,14 @@ const styles = StyleSheet.create({
   },
   categoryPillText: {
     color: COLORS.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12.5,
+    fontWeight: '500',
   },
   categoryPillTextActive: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
-  },
-  loaderBox: {
-    paddingVertical: 64,
-    alignItems: 'center',
   },
   gridContainer: {
     flexDirection: 'column',

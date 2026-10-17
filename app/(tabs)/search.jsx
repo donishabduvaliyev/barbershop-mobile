@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   ScrollView,
   Pressable,
@@ -12,10 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { ShopCard } from '../../src/components/ShopCard';
+import { MOTION_ASSETS } from '../../src/components/BrandAssets';
+import { SearchSkeleton } from '../../src/components/Skeletons';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -26,11 +29,11 @@ export default function SearchScreen() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [discovery, setDiscovery] = useState({ advertisedShops: [], categories: [] });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Instant "Available Right Now" search state
   const [serviceQuery, setServiceQuery] = useState('');
-  const [selectedHourOffset, setSelectedHourOffset] = useState(1); // +1h, +2h, +3h
+  const [selectedHourOffset, setSelectedHourOffset] = useState(1);
   const [availableNowResults, setAvailableNowResults] = useState(null);
   const [isSearchingNow, setIsSearchingNow] = useState(false);
 
@@ -98,14 +101,18 @@ export default function SearchScreen() {
       >
         <Text style={styles.pageTitle}>{t('Search')}</Text>
 
-        {/* Standard Shop & Category Search Input */}
+        {/* Search Input styled after components/search-bar.svg */}
         <View style={styles.searchInputBox}>
-          <Ionicons name="search" size={20} color={COLORS.textMuted} />
+          <Image
+            source={MOTION_ASSETS.icons.search}
+            style={{ width: 18, height: 18, tintColor: COLORS.accent }}
+            resizeMode="contain"
+          />
           <TextInput
             value={searchTerm}
             onChangeText={setSearchTerm}
             placeholder={t('SearchPlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.textFaint}
             style={styles.searchInput}
           />
           {!!searchTerm && (
@@ -118,7 +125,11 @@ export default function SearchScreen() {
         {/* Cross-Shop "Available Right Now" Finder */}
         <View style={styles.availableNowBox}>
           <View style={styles.availableHeader}>
-            <Ionicons name="flash" size={18} color={COLORS.accent} />
+            <Image
+              source={MOTION_ASSETS.icons.clock}
+              style={{ width: 18, height: 18, tintColor: COLORS.accent }}
+              resizeMode="contain"
+            />
             <Text style={styles.availableTitle}>{t('FindAvailableNow')}</Text>
           </View>
           <View style={styles.availableInputRow}>
@@ -126,15 +137,15 @@ export default function SearchScreen() {
               value={serviceQuery}
               onChangeText={setServiceQuery}
               placeholder={t('WhatServiceNeed')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.textFaint}
               style={styles.availableInput}
               onSubmitEditing={runAvailableNowSearch}
             />
             <Pressable onPress={runAvailableNowSearch} style={styles.availableGoBtn}>
               {isSearchingNow ? (
-                <ActivityIndicator size="small" color="#000" />
+                <ActivityIndicator size="small" color={COLORS.bg} />
               ) : (
-                <Ionicons name="arrow-forward" size={18} color="#000" />
+                <Ionicons name="arrow-forward" size={18} color={COLORS.bg} />
               )}
             </Pressable>
           </View>
@@ -202,9 +213,9 @@ export default function SearchScreen() {
           )}
         </View>
 
-        {/* Discovery Shelves */}
+        {/* Discovery Shelves with SearchSkeleton while loading */}
         {isLoading ? (
-          <ActivityIndicator size="large" color={COLORS.accent} style={{ marginTop: 36 }} />
+          <SearchSkeleton numColumns={numColumns} />
         ) : (
           discovery.categories?.map((shelf) => {
             if (!shelf.shops?.length) return null;
@@ -250,45 +261,48 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 14,
   },
   searchInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surface2,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     gap: 10,
     marginBottom: 16,
   },
   searchInput: {
     flex: 1,
     color: COLORS.text,
-    fontSize: 15,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 14.5,
   },
   availableNowBox: {
     backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     marginBottom: 24,
   },
   availableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginBottom: 10,
   },
   availableTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   availableInputRow: {
     flexDirection: 'row',
@@ -302,7 +316,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: COLORS.text,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   availableGoBtn: {
     backgroundColor: COLORS.accent,
@@ -317,20 +334,25 @@ const styles = StyleSheet.create({
   },
   hourPill: {
     backgroundColor: COLORS.surface2,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   hourPillActive: {
     backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   hourPillText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
     fontWeight: '600',
     fontSize: 13,
   },
   hourPillTextActive: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
   },
   nowResultsList: {
@@ -344,14 +366,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   nowShopName: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontSize: 15,
     fontWeight: '700',
   },
   nowServiceMeta: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -362,12 +388,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   nowSlotText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
   emptyText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     textAlign: 'center',
     paddingVertical: 8,
@@ -377,8 +405,9 @@ const styles = StyleSheet.create({
   },
   shelfTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 19,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 12,
   },
   gridContainer: {
