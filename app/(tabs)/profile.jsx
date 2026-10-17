@@ -157,11 +157,9 @@ export default function ProfileScreen() {
             <View style={styles.markWrap}>
               <SmartChairLogoMark size={52} pulse />
             </View>
-            <Image
-              source={MOTION_ASSETS.logos.wordmarkOutlined}
-              style={styles.authWordmark}
-              resizeMode="contain"
-            />
+            <Text style={styles.authTitle}>
+              Smart<Text style={{ color: COLORS.accent }}>Chair</Text>
+            </Text>
             <Text style={styles.authSubtitle}>{t('SignInSubtitle')}</Text>
 
             {isAuthenticating ? (
@@ -184,33 +182,29 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <Pressable onPress={startTelegramLogin} style={styles.telegramLoginBtn}>
-                <Image
-                  source={MOTION_ASSETS.icons.telegram}
-                  style={{ width: 20, height: 20, tintColor: '#FFF' }}
-                  resizeMode="contain"
-                />
+                <Ionicons name="paper-plane" size={20} color="#FFF" style={{ marginRight: 8 }} />
                 <Text style={styles.telegramLoginText}>{t('SignInWithTelegram')}</Text>
               </Pressable>
             )}
           </Animated.View>
 
-          {/* Animated SmartChair Benefit Cards from SmartChair_Motion_Assets_PNG */}
+          {/* Luxury Benefit Highlights */}
           <Animated.View entering={FadeInDown.delay(140).duration(400)} style={styles.benefitsRow}>
-            <Image
-              source={MOTION_ASSETS.components.benefit247}
-              style={styles.benefitImg}
-              resizeMode="contain"
-            />
-            <Image
-              source={MOTION_ASSETS.components.benefitFewerNoShows}
-              style={styles.benefitImg}
-              resizeMode="contain"
-            />
-            <Image
-              source={MOTION_ASSETS.components.benefitRepeatVisits}
-              style={styles.benefitImg}
-              resizeMode="contain"
-            />
+            <View style={styles.benefitCard}>
+              <Ionicons name="flash-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.benefitCardTitle}>Instant Booking</Text>
+              <Text style={styles.benefitCardSub}>Real-time slots</Text>
+            </View>
+            <View style={styles.benefitCard}>
+              <Ionicons name="notifications-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.benefitCardTitle}>Telegram Sync</Text>
+              <Text style={styles.benefitCardSub}>Live updates</Text>
+            </View>
+            <View style={styles.benefitCard}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.benefitCardTitle}>Verified Pros</Text>
+              <Text style={styles.benefitCardSub}>Top salons & spas</Text>
+            </View>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -370,11 +364,7 @@ export default function ProfileScreen() {
                           }}
                           style={styles.rateBookingBtn}
                         >
-                          <Image
-                            source={MOTION_ASSETS.icons.star}
-                            style={{ width: 14, height: 14, tintColor: COLORS.bg }}
-                            resizeMode="contain"
-                          />
+                          <Ionicons name="star" size={13} color="#0A0A0C" style={{ marginRight: 4 }} />
                           <Text style={styles.rateBookingText}>{t('RateVisit')}</Text>
                         </Pressable>
                       )}
@@ -536,10 +526,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  authWordmark: {
-    width: 175,
-    height: 30,
-    marginBottom: 10,
+  authTitle: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
   authSubtitle: {
     color: COLORS.textMuted,
@@ -550,14 +543,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   telegramLoginBtn: {
-    backgroundColor: COLORS.telegram,
+    backgroundColor: '#2AABEE',
     width: '100%',
     paddingVertical: 15,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
   },
   telegramLoginText: {
     color: '#FFF',
@@ -567,15 +559,35 @@ const styles = StyleSheet.create({
   },
   benefitsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 20,
+    justifyContent: 'space-between',
+    width: '100%',
     maxWidth: 420,
+    marginTop: 20,
+    gap: 10,
   },
-  benefitImg: {
-    width: 120,
-    height: 92,
+  benefitCard: {
+    flex: 1,
+    backgroundColor: '#131317',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+  },
+  benefitCardTitle: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11.5,
+    fontWeight: '700',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  benefitCardSub: {
+    color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
   },
   waitingBox: {
     alignItems: 'center',

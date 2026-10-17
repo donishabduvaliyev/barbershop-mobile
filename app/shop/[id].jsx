@@ -120,11 +120,7 @@ export default function ShopDetailScreen() {
               <View style={styles.titleRow}>
                 <Text style={styles.shopTitle}>{shopName}</Text>
                 <View style={styles.ratingPill}>
-                  <Image
-                    source={MOTION_ASSETS.icons.star}
-                    style={{ width: 14, height: 14, tintColor: COLORS.accent }}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="star" size={13} color="#D4AF5A" />
                   <Text style={styles.ratingValue}>
                     {Number(shop.rating || 5.0).toFixed(1)}
                   </Text>
@@ -134,22 +130,14 @@ export default function ShopDetailScreen() {
 
               {!!shopAddress && (
                 <View style={styles.metaRow}>
-                  <Image
-                    source={MOTION_ASSETS.icons.mapPin}
-                    style={{ width: 16, height: 16, tintColor: COLORS.accent }}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="location-sharp" size={16} color="#D4AF5A" />
                   <Text style={styles.metaText}>{shopAddress}</Text>
                 </View>
               )}
 
               {shop.phone && (
                 <View style={styles.metaRow}>
-                  <Image
-                    source={MOTION_ASSETS.icons.phone}
-                    style={{ width: 16, height: 16, tintColor: COLORS.accent }}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="call" size={15} color="#D4AF5A" />
                   <Text style={styles.metaText}>{shop.phone}</Text>
                 </View>
               )}
@@ -243,11 +231,7 @@ export default function ShopDetailScreen() {
                         {member.role || 'Master'}
                       </Text>
                       <View style={styles.staffRatingRow}>
-                        <Image
-                          source={MOTION_ASSETS.icons.star}
-                          style={{ width: 12, height: 12, tintColor: COLORS.accent }}
-                          resizeMode="contain"
-                        />
+                        <Ionicons name="star" size={11} color="#D4AF5A" />
                         <Text style={styles.staffRatingText}>
                           {Number(member.rating || 5.0).toFixed(1)}
                         </Text>
