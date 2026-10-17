@@ -45,44 +45,35 @@ export const SkeletonBox = ({ width = '100%', height = 16, borderRadius = 10, st
   );
 };
 
-// Shop Card Skeleton matching components/card-shop.svg geometry
-export const ShopCardSkeleton = () => (
-  <View style={styles.shopCard}>
-    <SkeletonBox width="100%" height={175} borderRadius={0} />
-    <View style={styles.shopCardContent}>
-      <View style={styles.rowBetween}>
-        <SkeletonBox width="62%" height={18} borderRadius={6} />
-        <SkeletonBox width={36} height={16} borderRadius={6} />
-      </View>
-      <SkeletonBox width="45%" height={13} borderRadius={5} style={{ marginTop: 10 }} />
-      <View style={[styles.rowBetween, { marginTop: 16 }]}>
-        <SkeletonBox width={80} height={26} borderRadius={8} />
-        <SkeletonBox width={104} height={32} borderRadius={10} />
-      </View>
+// Catalog Card Skeleton matching CatalogCard.jsx / Catalog.jsx
+export const CatalogCardSkeleton = () => (
+  <View style={styles.catalogCardSkeleton}>
+    <SkeletonBox width="100%" height={100} borderRadius={0} />
+    <View style={styles.catalogCardBody}>
+      <SkeletonBox width="70%" height={14} borderRadius={5} />
+      <SkeletonBox width="40%" height={12} borderRadius={4} style={{ marginTop: 6 }} />
     </View>
   </View>
 );
 
-// Home Screen Skeleton Grid (adapts to 1, 2, or 3 columns on phone/tablet)
-export const HomeFeedSkeleton = ({ numColumns = 1 }) => {
-  const items = Array.from({ length: numColumns === 1 ? 3 : 6 }, (_, i) => i);
-  return (
-    <View style={[styles.gridContainer, numColumns > 1 && styles.gridContainerTablet]}>
-      {items.map((item) => (
-        <View
-          key={item}
-          style={[
-            styles.gridItem,
-            numColumns === 2 && styles.gridItemTwoCol,
-            numColumns === 3 && styles.gridItemThreeCol,
-          ]}
-        >
-          <ShopCardSkeleton />
+// Home Screen Skeleton matching Catalog sections
+export const HomeFeedSkeleton = () => (
+  <View style={{ paddingTop: 8 }}>
+    {[1, 2].map((section) => (
+      <View key={section} style={{ marginBottom: 24 }}>
+        <View style={styles.sectionHeaderRow}>
+          <SkeletonBox width={120} height={18} borderRadius={6} />
+          <SkeletonBox width={50} height={14} borderRadius={5} />
         </View>
-      ))}
-    </View>
-  );
-};
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+          <CatalogCardSkeleton />
+          <CatalogCardSkeleton />
+          <CatalogCardSkeleton />
+        </View>
+      </View>
+    ))}
+  </View>
+);
 
 // Search Discovery Shelves Skeleton
 export const SearchSkeleton = ({ numColumns = 1 }) => (
@@ -234,5 +225,22 @@ const styles = StyleSheet.create({
   gridItemThreeCol: {
     width: '33.333%',
     paddingHorizontal: 8,
+  },
+  catalogCardSkeleton: {
+    width: 155,
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  catalogCardBody: {
+    padding: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
 });

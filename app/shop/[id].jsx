@@ -75,6 +75,8 @@ export default function ShopDetailScreen() {
     shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
   const shopAddress =
     shop.address?.[lang] || shop.address?.uz || shop.address?.ru || shop.address?.en || '';
+  const shopDesc =
+    shop.description?.[lang] || shop.description?.uz || shop.description?.ru || shop.description?.en || '';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -129,6 +131,10 @@ export default function ShopDetailScreen() {
                   <Text style={styles.reviewsCount}>({shop.reviewsCount || 0})</Text>
                 </View>
               </View>
+
+              {!!shopDesc && (
+                <Text style={styles.shopDescription}>{shopDesc}</Text>
+              )}
 
               {!!shopAddress && (
                 <View style={styles.metaRow}>
@@ -350,6 +356,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     marginRight: 10,
+  },
+  shopDescription: {
+    color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
+    lineHeight: 19,
+    marginBottom: 12,
   },
   ratingPill: {
     flexDirection: 'row',
