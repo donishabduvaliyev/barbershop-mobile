@@ -1,19 +1,11 @@
 import React from 'react';
-import { Image, Platform, StyleSheet } from 'react-native';
+import { View, Platform, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useResponsive } from '../../src/hooks/useResponsive';
-import { MOTION_ASSETS } from '../../src/components/BrandAssets';
-
-const NavIcon = ({ source, color }) => (
-  <Image
-    source={source}
-    style={{ width: 22, height: 22, tintColor: color }}
-    resizeMode="contain"
-  />
-);
 
 export default function TabsLayout() {
   const { t } = useTranslation();
@@ -46,8 +38,12 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('Home'),
-          tabBarIcon: ({ color }) => (
-            <NavIcon source={MOTION_ASSETS.icons.home} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'sparkles' : 'sparkles-outline'}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -55,8 +51,12 @@ export default function TabsLayout() {
         name="search"
         options={{
           title: t('Search'),
-          tabBarIcon: ({ color }) => (
-            <NavIcon source={MOTION_ASSETS.icons.search} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'search' : 'search-outline'}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -64,8 +64,12 @@ export default function TabsLayout() {
         name="map"
         options={{
           title: t('Map'),
-          tabBarIcon: ({ color }) => (
-            <NavIcon source={MOTION_ASSETS.icons.mapPin} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'map' : 'map-outline'}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -73,8 +77,12 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: t('Profile'),
-          tabBarIcon: ({ color }) => (
-            <NavIcon source={MOTION_ASSETS.icons.users} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -82,24 +90,30 @@ export default function TabsLayout() {
   );
 }
 
-// Styled after components/bottom-nav.svg (#1A1A1F surface-2 pill + #27272E border)
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: COLORS.surface2,
-    borderTopColor: COLORS.border,
-    borderTopWidth: 1.5,
-    height: Platform.OS === 'ios' ? 84 : 66,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-    paddingTop: 8,
+    backgroundColor: '#121216',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 1,
+    height: Platform.OS === 'ios' ? 88 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 26 : 10,
+    paddingTop: 10,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   tabBarTablet: {
-    height: 72,
-    paddingHorizontal: 120,
+    height: 76,
+    paddingHorizontal: 140,
   },
   tabLabel: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
     fontWeight: '600',
+    marginTop: 2,
+    letterSpacing: -0.2,
   },
   tabLabelTablet: {
     fontSize: 13,

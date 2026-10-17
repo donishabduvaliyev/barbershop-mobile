@@ -89,11 +89,9 @@ export default function HomeScreen() {
               <SmartChairLogoMark size={28} />
             </View>
             <View>
-              <Image
-                source={MOTION_ASSETS.logos.wordmarkOutlined}
-                style={styles.wordmarkImg}
-                resizeMode="contain"
-              />
+              <Text style={styles.brandTitleText}>
+                Smart<Text style={{ color: COLORS.accent }}>Chair</Text>
+              </Text>
               <View style={styles.syncRow}>
                 <View
                   style={[
@@ -244,9 +242,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wordmarkImg: {
-    width: 118,
-    height: 20,
+  brandTitleText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    letterSpacing: -0.3,
   },
   syncRow: {
     flexDirection: 'row',

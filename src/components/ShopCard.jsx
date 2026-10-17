@@ -12,7 +12,6 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
-import { MOTION_ASSETS } from './BrandAssets';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -43,19 +42,20 @@ export const ShopCard = ({ shop, index = 0, style }) => {
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(Math.min(index * 60, 360)).springify().damping(18)}
+      entering={FadeInDown.delay(Math.min(index * 50, 300)).springify().damping(18)}
       style={[styles.wrapper, style]}
     >
       <AnimatedPressable
         onPressIn={() => {
-          scale.value = withSpring(0.97, { damping: 15, stiffness: 250 });
+          scale.value = withSpring(0.978, { damping: 18, stiffness: 280 });
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, { damping: 15, stiffness: 250 });
+          scale.value = withSpring(1, { damping: 18, stiffness: 280 });
         }}
         onPress={handlePress}
         style={[styles.card, animatedCardStyle]}
       >
+        {/* Cover Image with Glass Floating Badges */}
         <View style={styles.imageContainer}>
           <Image
             source={{
@@ -66,39 +66,43 @@ export const ShopCard = ({ shop, index = 0, style }) => {
             style={styles.image}
             resizeMode="cover"
           />
+
+          {/* Promoted Luxury Pill */}
           {shop.isPromoted && (
             <View style={styles.promotedBadge}>
-              <Ionicons name="sparkles" size={11} color={COLORS.bg} />
+              <Ionicons name="sparkles" size={11} color="#D4AF5A" />
               <Text style={styles.promotedText}>{t('Promoted')}</Text>
             </View>
           )}
+
+          {/* Frosted Glass Floating Heart Button */}
           <Pressable
             onPress={(e) => {
               e.stopPropagation?.();
+              if (Platform.OS !== 'web') Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               toggleFavorite(shop._id);
             }}
             style={styles.favoriteBtn}
-            hitSlop={10}
+            hitSlop={8}
           >
             <Ionicons
               name={isFavorited ? 'heart' : 'heart-outline'}
-              size={20}
-              color={isFavorited ? COLORS.danger : '#FFF'}
+              size={18}
+              color={isFavorited ? COLORS.danger : '#FFFFFF'}
             />
           </Pressable>
+
+          {/* Rating Pill */}
           <View style={styles.ratingBadge}>
-            <Image
-              source={MOTION_ASSETS.icons.star}
-              style={{ width: 13, height: 13, tintColor: COLORS.accent }}
-              resizeMode="contain"
-            />
+            <Ionicons name="star" size={12} color="#D4AF5A" />
             <Text style={styles.ratingText}>
               {Number(shop.rating || 5.0).toFixed(1)}
             </Text>
-            <Text style={styles.reviewsText}>· {shop.reviewsCount || 0} {t('Reviews')}</Text>
+            <Text style={styles.reviewsText}>({shop.reviewsCount || 0})</Text>
           </View>
         </View>
 
+        {/* Content Body */}
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>
@@ -111,11 +115,7 @@ export const ShopCard = ({ shop, index = 0, style }) => {
 
           {!!shopAddress && (
             <View style={styles.addressRow}>
-              <Image
-                source={MOTION_ASSETS.icons.mapPin}
-                style={{ width: 13, height: 13, tintColor: COLORS.textMuted }}
-                resizeMode="contain"
-              />
+              <Ionicons name="location-sharp" size={13} color={COLORS.textMuted} />
               <Text style={styles.address} numberOfLines={1}>
                 {shopAddress}
               </Text>
@@ -130,12 +130,13 @@ export const ShopCard = ({ shop, index = 0, style }) => {
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
                 router.push(`/booking/${shop._id}`);
               }}
               style={styles.bookBtn}
             >
               <Text style={styles.bookBtnText}>{t('BookNow')}</Text>
-              <Ionicons name="arrow-forward" size={14} color={COLORS.bg} />
+              <Ionicons name="arrow-forward" size={13} color="#0A0A0C" />
             </Pressable>
           </View>
         </View>
@@ -144,23 +145,28 @@ export const ShopCard = ({ shop, index = 0, style }) => {
   );
 };
 
-// Styled after components/card-shop.svg (#131317 fill, #212127 1.5px stroke, #D4AF5A rating)
 const styles = StyleSheet.create({
   wrapper: {
+    width: '100%',
     marginBottom: 16,
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
+    backgroundColor: '#131317',
+    borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: COLORS.surface3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
   },
   imageContainer: {
-    height: 175,
     width: '100%',
+    height: 160,
+    backgroundColor: '#1A1A1F',
     position: 'relative',
-    backgroundColor: '#2A2416',
   },
   image: {
     width: '100%',
@@ -168,53 +174,60 @@ const styles = StyleSheet.create({
   },
   promotedBadge: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    top: 10,
+    left: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(10, 10, 12, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 90, 0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   promotedText: {
-    color: COLORS.bg,
+    color: '#D4AF5A',
     fontFamily: FONTS.bodyBold,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   favoriteBtn: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(10, 10, 12, 0.68)',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(10, 10, 12, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   ratingBadge: {
     position: 'absolute',
     bottom: 10,
-    left: 12,
-    backgroundColor: 'rgba(10, 10, 12, 0.86)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    left: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(10, 10, 12, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   ratingText: {
-    color: COLORS.accent,
+    color: '#F4F4F5',
     fontFamily: FONTS.bodyBold,
-    fontWeight: '700',
     fontSize: 12,
+    fontWeight: '700',
   },
   reviewsText: {
-    color: COLORS.accent,
+    color: COLORS.textMuted,
     fontFamily: FONTS.bodyRegular,
     fontSize: 11,
   },
@@ -228,18 +241,19 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    color: COLORS.text,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16.5,
-    fontWeight: '700',
     flex: 1,
+    color: '#F4F4F5',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     marginRight: 8,
   },
   priceTier: {
-    color: COLORS.accent,
+    color: '#D4AF5A',
     fontFamily: FONTS.bodyBold,
-    fontWeight: '700',
     fontSize: 13,
+    fontWeight: '700',
   },
   addressRow: {
     flexDirection: 'row',
@@ -248,43 +262,45 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   address: {
+    flex: 1,
     color: COLORS.textMuted,
     fontFamily: FONTS.bodyRegular,
-    fontSize: 13,
-    flex: 1,
+    fontSize: 12.5,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
   categoryChip: {
-    backgroundColor: COLORS.surface2,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    backgroundColor: '#1A1A1F',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   categoryText: {
     color: COLORS.textMuted,
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 11,
   },
   bookBtn: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    backgroundColor: '#D4AF5A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9,
   },
   bookBtnText: {
-    color: COLORS.bg,
+    color: '#0A0A0C',
     fontFamily: FONTS.bodyBold,
+    fontSize: 12,
     fontWeight: '700',
-    fontSize: 13,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,9 +7,7 @@ import Animated, {
   withTiming,
   withDelay,
   withSequence,
-  withRepeat,
   Easing,
-  runOnJS,
   interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,412 +16,374 @@ import { MOTION_ASSETS } from './BrandAssets';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Offscreen launch distances for the 4 squares (corners / edges of screen)
-const OFF_X = SCREEN_WIDTH * 0.75;
-const OFF_Y = SCREEN_HEIGHT * 0.55;
+// Offscreen origin offsets - smoothly outside viewport
+const OFF_X = SCREEN_WIDTH * 0.58;
+const OFF_Y = SCREEN_HEIGHT * 0.42;
 
-// Tile size for the 2x2 grid formation
-const TILE_SIZE = 38;
-const GAP = 9;
-const RADIUS = 11;
-const TARGET_OFFSET = (TILE_SIZE + GAP) / 2; // ~23.5px from center
+// High-DPI Dimensions for the 2x2 grid
+const TILE_SIZE = 42;
+const GAP = 10;
+const RADIUS = 12;
+const OFFSET = (TILE_SIZE + GAP) / 2; // 26px
 
 export const AnimatedSplashScreen = ({ isReady, onFinish }) => {
-  // Container master controls
+  // Master container transition controls
   const containerOpacity = useSharedValue(1);
   const containerScale = useSharedValue(1);
 
-  // Background ambient gold radial glow
-  const ambientGlowScale = useSharedValue(0.4);
-  const ambientGlowOpacity = useSharedValue(0);
+  // Deep ambient gold background aura
+  const auraScale = useSharedValue(0.7);
+  const auraOpacity = useSharedValue(0);
 
-  // Shockwave ring that expands when tiles collide
-  const shockwaveScale = useSharedValue(0.3);
-  const shockwaveOpacity = useSharedValue(0);
+  // Subtle radial shockwave burst when tiles dock
+  const pulseRingScale = useSharedValue(0.5);
+  const pulseRingOpacity = useSharedValue(0);
 
-  // Central logo bounce when tiles dock
-  const logoMasterScale = useSharedValue(1);
+  // Master logo cluster cushioning
+  const clusterScale = useSharedValue(1);
 
-  // High-res SmartChair Gold Mark cross-fade
+  // Seamless high-res gold mark cross-fade
   const goldMarkOpacity = useSharedValue(0);
-  const goldMarkScale = useSharedValue(0.85);
 
-  // 4 Squares coordinates & transformations
-  // Tile 1: Top-Left
-  const t1X = useSharedValue(-OFF_X);
-  const t1Y = useSharedValue(-OFF_Y);
-  const t1Rot = useSharedValue(-90);
-  const t1Scale = useSharedValue(0.2);
-  const t1Opacity = useSharedValue(0);
+  // Continuous Apple-eased movement for the 4 squares
+  // Unified progress from 0 (edges) to 1 (center)
+  const convergeProgress = useSharedValue(0);
 
-  // Tile 2: Top-Right
-  const t2X = useSharedValue(OFF_X);
-  const t2Y = useSharedValue(-OFF_Y);
-  const t2Rot = useSharedValue(90);
-  const t2Scale = useSharedValue(0.2);
-  const t2Opacity = useSharedValue(0);
-
-  // Tile 3: Bottom-Left
-  const t3X = useSharedValue(-OFF_X);
-  const t3Y = useSharedValue(OFF_Y);
-  const t3Rot = useSharedValue(90);
-  const t3Scale = useSharedValue(0.2);
-  const t3Opacity = useSharedValue(0);
-
-  // Tile 4: Bottom-Right (Signature Gold Accent Tile)
-  const t4X = useSharedValue(OFF_X);
-  const t4Y = useSharedValue(OFF_Y);
-  const t4Rot = useSharedValue(-90);
-  const t4Scale = useSharedValue(0.2);
-  const t4Opacity = useSharedValue(0);
-
-  // Wordmark and tagline reveal
+  // Typography reveal
   const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(28);
+  const textTranslateY = useSharedValue(22);
 
-  // Shimmer / Shine sweeping beam
-  const shineProgress = useSharedValue(-1.5);
-  const glintScale = useSharedValue(0);
+  // Specular sheen / shine sweep across logo and text
+  const shineProgress = useSharedValue(-1.2);
+
+  // Soft sparkle glint
   const glintOpacity = useSharedValue(0);
+  const glintScale = useSharedValue(0.3);
 
-  // Minimum display timer so users always experience the full cinematic reveal
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  // State to ensure user sees the complete, unhurried animation before dismiss
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
-    // 0. Ambient background glow warms up
-    ambientGlowOpacity.value = withTiming(0.4, { duration: 600 });
-    ambientGlowScale.value = withTiming(1.2, { duration: 1400 });
+    // 1. Ambient luxury gold aura softly breathes in
+    auraOpacity.value = withTiming(0.42, {
+      duration: 1200,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    });
+    auraScale.value = withTiming(1.35, {
+      duration: 2200,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    });
 
-    // 1. The 4 squares appear at the screen edges and gather in the center
-    const springPhysics = {
-      damping: 13,
-      stiffness: 85,
-      mass: 0.9,
-    };
+    // 2. The 4 squares glide from the screen edges toward the center
+    // Using Apple signature decelerating curve for buttery liquid motion
+    convergeProgress.value = withTiming(1, {
+      duration: 1100,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    });
 
-    // Fade and scale in fast from edges
-    t1Opacity.value = withTiming(1, { duration: 250 });
-    t2Opacity.value = withDelay(40, withTiming(1, { duration: 250 }));
-    t3Opacity.value = withDelay(80, withTiming(1, { duration: 250 }));
-    t4Opacity.value = withDelay(120, withTiming(1, { duration: 250 }));
+    // 3. Collision / Docking Moment (at ~1050ms)
+    // Soft cushion bounce + radial pulse ring
+    const dockTime = 1050;
 
-    t1Scale.value = withSpring(1, springPhysics);
-    t2Scale.value = withDelay(40, withSpring(1, springPhysics));
-    t3Scale.value = withDelay(80, withSpring(1, springPhysics));
-    t4Scale.value = withDelay(120, withSpring(1, springPhysics));
-
-    // Converge to 2x2 target offsets around center
-    t1X.value = withSpring(-TARGET_OFFSET, springPhysics);
-    t1Y.value = withSpring(-TARGET_OFFSET, springPhysics);
-    t1Rot.value = withSpring(0, springPhysics);
-
-    t2X.value = withDelay(40, withSpring(TARGET_OFFSET, springPhysics));
-    t2Y.value = withDelay(40, withSpring(-TARGET_OFFSET, springPhysics));
-    t2Rot.value = withDelay(40, withSpring(0, springPhysics));
-
-    t3X.value = withDelay(80, withSpring(-TARGET_OFFSET, springPhysics));
-    t3Y.value = withDelay(80, withSpring(TARGET_OFFSET, springPhysics));
-    t3Rot.value = withDelay(80, withSpring(0, springPhysics));
-
-    t4X.value = withDelay(120, withSpring(TARGET_OFFSET, springPhysics));
-    t4Y.value = withDelay(120, withSpring(TARGET_OFFSET, springPhysics));
-    t4Rot.value = withDelay(120, withSpring(0, springPhysics));
-
-    // 2. The moment they collide & assemble (approx 680ms)
-    const collideTime = 680;
-
-    // Shockwave expands outward
-    shockwaveScale.value = withDelay(
-      collideTime,
-      withTiming(2.4, { duration: 600, easing: Easing.out(Easing.cubic) })
-    );
-    shockwaveOpacity.value = withDelay(
-      collideTime,
+    pulseRingOpacity.value = withDelay(
+      dockTime,
       withSequence(
-        withTiming(0.85, { duration: 80 }),
-        withTiming(0, { duration: 520 })
+        withTiming(0.75, { duration: 100 }),
+        withTiming(0, { duration: 650, easing: Easing.out(Easing.cubic) })
+      )
+    );
+    pulseRingScale.value = withDelay(
+      dockTime,
+      withTiming(2.1, { duration: 750, easing: Easing.out(Easing.cubic) })
+    );
+
+    // Tactile settling cushion
+    clusterScale.value = withDelay(
+      dockTime,
+      withSequence(
+        withTiming(1.06, { duration: 120, easing: Easing.out(Easing.quad) }),
+        withSpring(1.0, { damping: 14, stiffness: 140, mass: 1.0 })
       )
     );
 
-    // Center logo spring compression & snap
-    logoMasterScale.value = withDelay(
-      collideTime,
-      withSequence(
-        withTiming(1.12, { duration: 110 }),
-        withSpring(1, { damping: 10, stiffness: 180 })
-      )
+    // Cross-fade the unified high-res smartchair-mark-gold.png
+    goldMarkOpacity.value = withDelay(
+      dockTime + 50,
+      withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) })
     );
 
-    // Cross-fade the unified high-res smartchair-mark-gold.png logo
-    goldMarkOpacity.value = withDelay(collideTime + 60, withTiming(1, { duration: 320 }));
-    goldMarkScale.value = withDelay(
-      collideTime + 60,
-      withSpring(1, { damping: 12, stiffness: 150 })
+    // 4. Elegant typography emerges beneath the logo (at ~1250ms)
+    textOpacity.value = withDelay(
+      1200,
+      withTiming(1, { duration: 600, easing: Easing.bezier(0.16, 1, 0.3, 1) })
     );
-
-    // 3. SmartChair text / wordmark appears beneath it (approx 900ms)
-    textOpacity.value = withDelay(880, withTiming(1, { duration: 450 }));
     textTranslateY.value = withDelay(
-      880,
-      withSpring(0, { damping: 14, stiffness: 120 })
+      1200,
+      withSpring(0, { damping: 18, stiffness: 110, mass: 1.0 })
     );
 
-    // 4. Brilliant diagonal gold shine / light sweep across the logo & text (approx 1350ms)
+    // 5. Specular Golden Shine sweeps across the lockup (at ~1650ms)
     shineProgress.value = withDelay(
-      1320,
-      withTiming(1.5, {
+      1600,
+      withTiming(1.2, {
         duration: 900,
         easing: Easing.bezier(0.2, 0.8, 0.25, 1),
       })
     );
 
-    // Sparkle / Glint star burst at the logo corner during the shine
+    // Subtle glint on the gold tile during the shine
     glintOpacity.value = withDelay(
-      1550,
+      1820,
       withSequence(
-        withTiming(1, { duration: 120 }),
-        withTiming(0, { duration: 280 })
+        withTiming(1, { duration: 140 }),
+        withTiming(0, { duration: 320 })
       )
     );
     glintScale.value = withDelay(
-      1550,
+      1820,
       withSequence(
-        withTiming(1.25, { duration: 140 }),
-        withTiming(0.2, { duration: 260 })
+        withTiming(1.3, { duration: 160 }),
+        withTiming(0.5, { duration: 300 })
       )
     );
 
-    // Pulse ambient glow gently
-    ambientGlowOpacity.value = withDelay(
-      1400,
-      withRepeat(
-        withSequence(
-          withTiming(0.55, { duration: 900 }),
-          withTiming(0.3, { duration: 900 })
-        ),
-        -1,
-        true
-      )
-    );
+    // Let the complete animation breathe comfortably (~2.7s total)
+    const timer = setTimeout(() => {
+      setAnimationComplete(true);
+    }, 2700);
 
-    // Minimum cinematic display duration of 2.2s so the full choreography plays
-    const minTimer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 2200);
-
-    // Safety fallback: if network is slow/offline, transition anyway after 3.2s
-    const maxSafetyTimer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 3200);
-
-    return () => {
-      clearTimeout(minTimer);
-      clearTimeout(maxSafetyTimer);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
-  // 5. When app data & fonts are ready (or minTime elapsed) -> graceful zoom-fade out
+  // 6. Seamless dissolution into the live app
   useEffect(() => {
-    if (!minTimeElapsed) return;
+    if (!animationComplete) return;
 
-    containerScale.value = withTiming(1.06, {
-      duration: 450,
-      easing: Easing.inOut(Easing.cubic),
+    containerScale.value = withTiming(1.04, {
+      duration: 520,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
     });
     containerOpacity.value = withTiming(0, {
-      duration: 450,
-      easing: Easing.inOut(Easing.cubic),
+      duration: 520,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
     });
 
     const exitTimer = setTimeout(() => {
       onFinish?.();
-    }, 470);
+    }, 540);
 
     return () => clearTimeout(exitTimer);
-  }, [minTimeElapsed]);
+  }, [animationComplete]);
 
-  // Master container animated style
-  const containerStyle = useAnimatedStyle(() => ({
+  // Master styles
+  const masterContainerStyle = useAnimatedStyle(() => ({
     opacity: containerOpacity.value,
     transform: [{ scale: containerScale.value }],
   }));
 
-  // Ambient gold halo background
-  const ambientHaloStyle = useAnimatedStyle(() => ({
-    opacity: ambientGlowOpacity.value,
-    transform: [{ scale: ambientGlowScale.value }],
+  const auraStyle = useAnimatedStyle(() => ({
+    opacity: auraOpacity.value,
+    transform: [{ scale: auraScale.value }],
   }));
 
-  // Shockwave ring
-  const shockwaveStyle = useAnimatedStyle(() => ({
-    opacity: shockwaveOpacity.value,
-    transform: [{ scale: shockwaveScale.value }],
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    opacity: pulseRingOpacity.value,
+    transform: [{ scale: pulseRingScale.value }],
   }));
 
-  // Center logo master scale
-  const logoMasterStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoMasterScale.value }],
+  const clusterAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: clusterScale.value }],
   }));
 
-  // High-res smartchair-mark-gold layer
-  const goldMarkStyle = useAnimatedStyle(() => ({
+  const goldMarkFadeStyle = useAnimatedStyle(() => ({
     opacity: goldMarkOpacity.value,
-    transform: [{ scale: goldMarkScale.value }],
   }));
 
-  // Individual 4 square styles
-  const t1Style = useAnimatedStyle(() => ({
-    opacity: t1Opacity.value,
-    transform: [
-      { translateX: t1X.value },
-      { translateY: t1Y.value },
-      { rotate: `${t1Rot.value}deg` },
-      { scale: t1Scale.value },
-    ],
-  }));
+  // Buttery interpolated coordinates for the 4 squares
+  // Top-Left (Tile 1)
+  const t1Style = useAnimatedStyle(() => {
+    const p = convergeProgress.value;
+    const x = interpolate(p, [0, 1], [-OFF_X, -OFFSET]);
+    const y = interpolate(p, [0, 1], [-OFF_Y, -OFFSET]);
+    const rot = interpolate(p, [0, 1], [-30, 0]);
+    const s = interpolate(p, [0, 1], [0.4, 1]);
+    const op = interpolate(p, [0, 0.3, 1], [0, 0.9, 1]);
+    return {
+      opacity: op,
+      transform: [
+        { translateX: x },
+        { translateY: y },
+        { rotate: `${rot}deg` },
+        { scale: s },
+      ],
+    };
+  });
 
-  const t2Style = useAnimatedStyle(() => ({
-    opacity: t2Opacity.value,
-    transform: [
-      { translateX: t2X.value },
-      { translateY: t2Y.value },
-      { rotate: `${t2Rot.value}deg` },
-      { scale: t2Scale.value },
-    ],
-  }));
+  // Top-Right (Tile 2)
+  const t2Style = useAnimatedStyle(() => {
+    const p = convergeProgress.value;
+    const x = interpolate(p, [0, 1], [OFF_X, OFFSET]);
+    const y = interpolate(p, [0, 1], [-OFF_Y, -OFFSET]);
+    const rot = interpolate(p, [0, 1], [30, 0]);
+    const s = interpolate(p, [0, 1], [0.4, 1]);
+    const op = interpolate(p, [0, 0.3, 1], [0, 0.9, 1]);
+    return {
+      opacity: op,
+      transform: [
+        { translateX: x },
+        { translateY: y },
+        { rotate: `${rot}deg` },
+        { scale: s },
+      ],
+    };
+  });
 
-  const t3Style = useAnimatedStyle(() => ({
-    opacity: t3Opacity.value,
-    transform: [
-      { translateX: t3X.value },
-      { translateY: t3Y.value },
-      { rotate: `${t3Rot.value}deg` },
-      { scale: t3Scale.value },
-    ],
-  }));
+  // Bottom-Left (Tile 3)
+  const t3Style = useAnimatedStyle(() => {
+    const p = convergeProgress.value;
+    const x = interpolate(p, [0, 1], [-OFF_X, -OFFSET]);
+    const y = interpolate(p, [0, 1], [OFF_Y, OFFSET]);
+    const rot = interpolate(p, [0, 1], [30, 0]);
+    const s = interpolate(p, [0, 1], [0.4, 1]);
+    const op = interpolate(p, [0, 0.3, 1], [0, 0.9, 1]);
+    return {
+      opacity: op,
+      transform: [
+        { translateX: x },
+        { translateY: y },
+        { rotate: `${rot}deg` },
+        { scale: s },
+      ],
+    };
+  });
 
-  const t4Style = useAnimatedStyle(() => ({
-    opacity: t4Opacity.value,
-    transform: [
-      { translateX: t4X.value },
-      { translateY: t4Y.value },
-      { rotate: `${t4Rot.value}deg` },
-      { scale: t4Scale.value },
-    ],
-  }));
+  // Bottom-Right (Tile 4 - Solid Gold)
+  const t4Style = useAnimatedStyle(() => {
+    const p = convergeProgress.value;
+    const x = interpolate(p, [0, 1], [OFF_X, OFFSET]);
+    const y = interpolate(p, [0, 1], [OFF_Y, OFFSET]);
+    const rot = interpolate(p, [0, 1], [-30, 0]);
+    const s = interpolate(p, [0, 1], [0.4, 1]);
+    const op = interpolate(p, [0, 0.3, 1], [0, 0.9, 1]);
+    return {
+      opacity: op,
+      transform: [
+        { translateX: x },
+        { translateY: y },
+        { rotate: `${rot}deg` },
+        { scale: s },
+      ],
+    };
+  });
 
-  // Wordmark and tagline reveal
-  const textStyle = useAnimatedStyle(() => ({
+  // Typography reveal style
+  const typographyStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
     transform: [{ translateY: textTranslateY.value }],
   }));
 
-  // Shine beam sweeping across the whole lockup
-  const shineStyle = useAnimatedStyle(() => ({
+  // Specular shine sweep style
+  const shineSweepStyle = useAnimatedStyle(() => ({
     transform: [
       {
         translateX: interpolate(
           shineProgress.value,
-          [-1.5, 1.5],
-          [-SCREEN_WIDTH * 0.9, SCREEN_WIDTH * 0.9]
+          [-1.2, 1.2],
+          [-SCREEN_WIDTH * 0.8, SCREEN_WIDTH * 0.8]
         ),
       },
       { rotate: '25deg' },
     ],
   }));
 
-  // Sparkle / Glint star
+  // Sparkle glint style
   const glintStyle = useAnimatedStyle(() => ({
     opacity: glintOpacity.value,
     transform: [{ scale: glintScale.value }],
   }));
 
   return (
-    <Animated.View style={[styles.overlay, containerStyle]} pointerEvents="auto">
-      {/* Ambient background gold glow */}
-      <Animated.View style={[styles.ambientHalo, ambientHaloStyle]}>
+    <Animated.View style={[styles.overlay, masterContainerStyle]} pointerEvents="auto">
+      {/* 1. Deep Atmospheric Gold Background Glow */}
+      <Animated.View style={[styles.ambientAura, auraStyle]}>
         <LinearGradient
-          colors={['rgba(212, 175, 90, 0.32)', 'rgba(212, 175, 90, 0.08)', 'transparent']}
+          colors={['rgba(212, 175, 90, 0.28)', 'rgba(212, 175, 90, 0.06)', 'transparent']}
           style={StyleSheet.absoluteFillObject}
           start={{ x: 0.5, y: 0.5 }}
           end={{ x: 1, y: 1 }}
         />
       </Animated.View>
 
-      {/* Center Logo & Animation Arena */}
-      <View style={styles.centerStage}>
-        {/* Shockwave Ring on Collision */}
-        <Animated.View style={[styles.shockwaveRing, shockwaveStyle]} />
+      {/* 2. Main Stage */}
+      <View style={styles.stage}>
+        {/* Docking Pulse Ring */}
+        <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
 
-        {/* Master Logo Arena */}
-        <Animated.View style={[styles.logoArena, logoMasterStyle]}>
-          {/* Tile 1: Top-Left (Luxury Dark Surface with Gold Rim) */}
-          <Animated.View style={[styles.tileBase, styles.darkTile, t1Style]}>
-            <View style={styles.tileInnerRim} />
+        {/* 2x2 Logo Formation Cluster */}
+        <Animated.View style={[styles.clusterWrap, clusterAnimatedStyle]}>
+          {/* Tile 1: Top-Left (Obsidian Surface with Hairline Rim) */}
+          <Animated.View style={[styles.tileBase, styles.obsidianTile, t1Style]}>
+            <View style={styles.tileInnerGleam} />
           </Animated.View>
 
-          {/* Tile 2: Top-Right (Dark Charcoal Surface) */}
-          <Animated.View style={[styles.tileBase, styles.darkTile, t2Style]}>
-            <View style={styles.tileInnerRim} />
+          {/* Tile 2: Top-Right (Obsidian Surface) */}
+          <Animated.View style={[styles.tileBase, styles.obsidianTile, t2Style]}>
+            <View style={styles.tileInnerGleam} />
           </Animated.View>
 
-          {/* Tile 3: Bottom-Left (Dark Charcoal Surface) */}
-          <Animated.View style={[styles.tileBase, styles.darkTile, t3Style]}>
-            <View style={styles.tileInnerRim} />
+          {/* Tile 3: Bottom-Left (Obsidian Surface) */}
+          <Animated.View style={[styles.tileBase, styles.obsidianTile, t3Style]}>
+            <View style={styles.tileInnerGleam} />
           </Animated.View>
 
-          {/* Tile 4: Bottom-Right (Signature Luminous Solid Gold Tile) */}
-          <Animated.View style={[styles.tileBase, styles.goldTile, t4Style]}>
+          {/* Tile 4: Bottom-Right (Solid Brushed Gold Accent) */}
+          <Animated.View style={[styles.tileBase, styles.goldAccentTile, t4Style]}>
             <LinearGradient
-              colors={['#F6E099', '#D4AF5A', '#AA822A']}
+              colors={['#F6E099', '#D4AF5A', '#A37926']}
               style={StyleSheet.absoluteFillObject}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
           </Animated.View>
 
-          {/* High-Res Unified smartchair-mark-gold.png cross-faded over assembled tiles */}
-          <Animated.View style={[styles.goldMarkContainer, goldMarkStyle]}>
+          {/* High-Resolution Unified smartchair-mark-gold.png cross-fades for ultimate crispness */}
+          <Animated.View style={[styles.unifiedGoldMark, goldMarkFadeStyle]}>
             <Image
               source={MOTION_ASSETS.logos.markGold}
-              style={styles.goldMarkImage}
+              style={styles.markImage}
               resizeMode="contain"
             />
           </Animated.View>
 
-          {/* Micro Starburst Glint on top corner */}
-          <Animated.View style={[styles.glintWrap, glintStyle]}>
-            <View style={styles.glintDot} />
-            <View style={styles.glintRayH} />
-            <View style={styles.glintRayV} />
+          {/* Soft Optical Glint on gold tile corner */}
+          <Animated.View style={[styles.glintContainer, glintStyle]}>
+            <View style={styles.glintCore} />
+            <View style={styles.glintBeamH} />
+            <View style={styles.glintBeamV} />
           </Animated.View>
         </Animated.View>
 
-        {/* Wordmark and Brand Descriptor Beneath the Logo */}
-        <Animated.View style={[styles.textArena, textStyle]}>
-          {/* SmartChair Wordmark Outlined Logo */}
-          <Image
-            source={MOTION_ASSETS.logos.wordmarkOutlined}
-            style={styles.wordmarkImage}
-            resizeMode="contain"
-          />
+        {/* 3. Pure Vector Typography (Retina Sharp - Zero Blur) */}
+        <Animated.View style={[styles.typographyBlock, typographyStyle]}>
+          <Text style={styles.brandTitle}>
+            Smart<Text style={styles.brandTitleGold}>Chair</Text>
+          </Text>
 
-          {/* Stylized Brand Typographic Tagline */}
-          <View style={styles.taglineRow}>
-            <View style={styles.taglineLine} />
-            <Text style={styles.taglineText}>PREMIUM GROOMING & INSTANT BOOKING</Text>
-            <View style={styles.taglineLine} />
+          <View style={styles.descriptorRow}>
+            <View style={styles.hairline} />
+            <Text style={styles.descriptorText}>LUXURY GROOMING · INSTANT BOOKING</Text>
+            <View style={styles.hairline} />
           </View>
         </Animated.View>
 
-        {/* Diagonal Specular Shine Beam that sweeps across the logo and text */}
-        <Animated.View pointerEvents="none" style={[styles.shineBeam, shineStyle]}>
+        {/* 4. Soft Specular Sheen Beam Sweeping Across */}
+        <Animated.View pointerEvents="none" style={[styles.specularBeam, shineSweepStyle]}>
           <LinearGradient
             colors={[
-              'rgba(212, 175, 90, 0)',
-              'rgba(255, 255, 255, 0.15)',
-              'rgba(255, 250, 220, 0.65)',
-              'rgba(212, 175, 90, 0.35)',
+              'rgba(255, 255, 255, 0)',
+              'rgba(255, 255, 255, 0.18)',
+              'rgba(255, 245, 210, 0.55)',
+              'rgba(212, 175, 90, 0.25)',
               'rgba(212, 175, 90, 0)',
             ]}
             start={{ x: 0, y: 0 }}
@@ -440,37 +400,37 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0A0A0C',
-    zIndex: 10000,
+    zIndex: 99999,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ambientHalo: {
+  ambientAura: {
     position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
+    width: 360,
+    height: 360,
+    borderRadius: 180,
     overflow: 'hidden',
   },
-  centerStage: {
+  stage: {
     alignItems: 'center',
     justifyContent: 'center',
     width: SCREEN_WIDTH,
     position: 'relative',
     overflow: 'hidden',
-    paddingVertical: 40,
+    paddingVertical: 50,
   },
-  shockwaveRing: {
+  pulseRing: {
     position: 'absolute',
-    top: 50,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
+    top: 55,
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 1.5,
     borderColor: '#D4AF5A',
   },
-  logoArena: {
-    width: 96,
-    height: 96,
+  clusterWrap: {
+    width: 104,
+    height: 104,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -485,105 +445,111 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  darkTile: {
-    backgroundColor: '#16161B',
+  obsidianTile: {
+    backgroundColor: '#141418',
     borderWidth: 1.5,
-    borderColor: '#2E2E38',
+    borderColor: '#26262D',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  tileInnerRim: {
+  tileInnerGleam: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 90, 0.15)',
+    borderColor: 'rgba(212, 175, 90, 0.16)',
     borderRadius: RADIUS - 1,
   },
-  goldTile: {
+  goldAccentTile: {
     shadowColor: '#D4AF5A',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.65,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  goldMarkContainer: {
+  unifiedGoldMark: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#D4AF5A',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.55,
-    shadowRadius: 18,
-    elevation: 10,
+    shadowRadius: 20,
+    elevation: 12,
   },
-  goldMarkImage: {
-    width: 92,
-    height: 92,
+  markImage: {
+    width: 98,
+    height: 98,
   },
-  glintWrap: {
+  glintContainer: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glintDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFF',
-    shadowColor: '#FFF',
-    shadowOpacity: 1,
-    shadowRadius: 6,
-  },
-  glintRayH: {
-    position: 'absolute',
+    top: 4,
+    right: 4,
     width: 20,
-    height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderRadius: 1,
-  },
-  glintRayV: {
-    position: 'absolute',
     height: 20,
-    width: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderRadius: 1,
-  },
-  textArena: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wordmarkImage: {
-    width: 220,
-    height: 44,
+  glintCore: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 1,
+    shadowRadius: 5,
   },
-  taglineRow: {
+  glintBeamH: {
+    position: 'absolute',
+    width: 16,
+    height: 1.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: 1,
+  },
+  glintBeamV: {
+    position: 'absolute',
+    height: 16,
+    width: 1.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: 1,
+  },
+  typographyBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandTitle: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    letterSpacing: 0.5,
+  },
+  brandTitleGold: {
+    color: '#D4AF5A',
+  },
+  descriptorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
-    gap: 8,
+    marginTop: 10,
+    gap: 10,
   },
-  taglineLine: {
-    width: 22,
+  hairline: {
+    width: 24,
     height: 1,
     backgroundColor: 'rgba(212, 175, 90, 0.35)',
   },
-  taglineText: {
-    color: '#D4AF5A',
+  descriptorText: {
     fontFamily: FONTS.bodyBold,
-    fontWeight: '700',
     fontSize: 10.5,
-    letterSpacing: 2.2,
+    fontWeight: '700',
+    color: '#D4AF5A',
+    letterSpacing: 2.4,
   },
-  shineBeam: {
+  specularBeam: {
     position: 'absolute',
-    top: -50,
-    bottom: -50,
-    width: 110,
+    top: -60,
+    bottom: -60,
+    width: 120,
   },
 });
