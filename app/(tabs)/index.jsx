@@ -19,6 +19,7 @@ import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { CatalogCard } from '../../src/components/CatalogCard';
+import { LanguageActionSheet } from '../../src/components/LanguageActionSheet';
 import { HomeFeedSkeleton } from '../../src/components/Skeletons';
 
 // Standard categories matching categories.json in barbershop-main
@@ -130,28 +131,8 @@ export default function HomeScreen() {
                 { backgroundColor: isSocketConnected ? COLORS.success : COLORS.warning },
               ]}
             />
-            {/* Language Toggle Pill (matching languageDropdown.jsx) */}
-            <View style={styles.langPill}>
-              {LANGUAGES.map((l) => (
-                <Pressable
-                  key={l.code}
-                  onPress={() => changeLanguage(l.code)}
-                  style={[
-                    styles.langBtn,
-                    currentLang === l.code && styles.langBtnActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.langBtnText,
-                      currentLang === l.code && styles.langBtnTextActive,
-                    ]}
-                  >
-                    {l.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* Language Action Sheet Modal (matching languageDropdown.jsx) */}
+            <LanguageActionSheet />
           </View>
         </View>
 

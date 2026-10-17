@@ -6,19 +6,18 @@ import {
   Pressable,
   Image,
   TextInput,
+  Modal,
   StyleSheet,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
-import { useResponsive } from '../../src/hooks/useResponsive';
-import { BookingSuccessModal } from '../../src/components/BrandAssets';
 import { BookingSheetSkeleton } from '../../src/components/Skeletons';
 
 const pad = (num) => String(num).padStart(2, '0');
@@ -51,6 +50,20 @@ const isHourTaken = (bookedSlots, date, hour, staffId, staffCount, capacity, isS
   return distinctStaffBooked >= staffCount;
 };
 
+// Validates whether a name looks like a legitimate person name
+const checkAppropriateName = (text) => {
+  const trimmed = text.trim();
+  if (trimmed.length < 2) {
+    return { ok: false, reason: 'Name is very short' };
+  }
+  // Check if name has symbols or numbers like 123, @#$%, etc.
+  const hasSuspiciousChars = /[0-9!@#$%^&*()_+=\[\]{};:"\\|,.<>\/?`~]/.test(trimmed);
+  if (hasSuspiciousChars) {
+    return { ok: false, reason: 'Please use a real or appropriate name' };
+  }
+  return { ok: true };
+};
+
 export default function BookingScreen() {
   const rawParams = useLocalSearchParams();
   const id = normParam(rawParams.id);
@@ -68,22 +81,25 @@ export default function BookingScreen() {
     showToast,
     subscribeShopAvailability,
     startTelegramLogin,
-    refreshProfile,
   } = useAppContext();
-  const { isTablet, horizontalPadding } = useResponsive();
 
   const [shop, setShop] = useState(null);
   const [availability, setAvailability] = useState({ workingHours: [], bookedSlots: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Form Inputs matching Booking.jsx in barbershop-main
   const [name, setName] = useState(userInfo?.name || '');
   const [phone, setPhone] = useState(userInfo?.phone || '');
+  const [nameAlert, setNameAlert] = useState(null); // Non-blocking alert
 
+  // Time & Date picker bottom sheet modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 4 Booking Days matching Booking.jsx
   const dates = useMemo(
     () =>
-      [...Array(5)].map((_, i) => {
+      [...Array(4)].map((_, i) => {
         const d = new Date();
         d.setHours(0, 0, 0, 0);
         d.setDate(d.getDate() + i);
@@ -97,11 +113,7 @@ export default function BookingScreen() {
   const [selectedStaffId, setSelectedStaffId] = useState(presetStaffId || null);
   const [selectedServiceId, setSelectedServiceId] = useState(presetServiceId || null);
 
-  useEffect(() => {
-    if (userInfo?.name && !name) setName(userInfo.name);
-    if (userInfo?.phone && !phone) setPhone(userInfo.phone);
-  }, [userInfo]);
-
+  // Fetch shop details and availability
   const fetchAvailability = useCallback(async () => {
     if (!id) return;
     try {
@@ -113,7 +125,7 @@ export default function BookingScreen() {
           .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/service/${id}/availability`)))
           .catch(() => fetch(`${backEndUrl}/api/shops/service/${id}/availability`)),
       ]);
-      if (shopRes.ok && availRes.ok) {
+      if (shopRes && shopRes.ok && availRes && availRes.ok) {
         const [shopData, availData] = await Promise.all([shopRes.json(), availRes.json()]);
         setShop(shopData);
         setAvailability(availData);
@@ -132,7 +144,7 @@ export default function BookingScreen() {
     fetchAvailability();
   }, [fetchAvailability]);
 
-  // Subscribe to real-time Socket.io availability updates for this shop
+  // Subscribe to real-time availability updates
   useEffect(() => {
     if (!id) return;
     return subscribeShopAvailability(id, () => {
@@ -144,8 +156,9 @@ export default function BookingScreen() {
   const staffCount = availability.staffCount || 0;
   const capacity = availability.capacity || 1;
 
+  // Filter staff who perform selected service
   const availableStaffForService = useMemo(() => {
-    if (!shop?.staff) return [];
+    if (!shop?.staff?.length) return [];
     if (!selectedServiceId) return shop.staff;
     return shop.staff.filter(
       (m) =>
@@ -155,14 +168,13 @@ export default function BookingScreen() {
   }, [shop, selectedServiceId]);
 
   useEffect(() => {
-    if (!shop) return;
     if (
       selectedStaffId &&
       !availableStaffForService.some((m) => String(m._id) === String(selectedStaffId))
     ) {
       setSelectedStaffId(null);
     }
-  }, [shop, availableStaffForService, selectedStaffId]);
+  }, [availableStaffForService, selectedStaffId]);
 
   const effectiveWorkingHours = useMemo(() => {
     if (selectedStaffId) {
@@ -172,24 +184,22 @@ export default function BookingScreen() {
     return shop?.workingHours || [];
   }, [shop, selectedStaffId]);
 
-  const selectedStaffOffThatDay = useMemo(() => {
-    if (!selectedDate || !selectedStaffId || !shop) return null;
-    const member = shop.staff?.find((m) => String(m._id) === String(selectedStaffId));
-    return member?.daysOff?.includes(toDateKey(selectedDate)) ? member.name : null;
-  }, [selectedDate, selectedStaffId, shop]);
+  const workingDays = useMemo(
+    () => effectiveWorkingHours.flatMap((wh) => wh.days || []),
+    [effectiveWorkingHours]
+  );
 
   const availableHours = useMemo(() => {
-    if (!selectedDate || !effectiveWorkingHours.length) return [];
-
+    if (!selectedDate || !effectiveWorkingHours?.length) return [];
     const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const schedules = effectiveWorkingHours.filter((wh) => wh.days?.includes(dayName));
-    if (!schedules.length) return [];
+    if (schedules.length === 0) return [];
 
     const now = new Date();
     const isToday = selectedDate.toDateString() === now.toDateString();
     const dateKey = toDateKey(selectedDate);
     const selectedMember = selectedStaffId
-      ? shop?.staff?.find((m) => String(m._id) === String(selectedStaffId))
+      ? shop.staff?.find((m) => String(m._id) === String(selectedStaffId))
       : null;
     const isStaffOff = !!selectedMember?.daysOff?.includes(dateKey);
 
@@ -238,28 +248,68 @@ export default function BookingScreen() {
   ]);
 
   useEffect(() => {
-    if (!shop || !selectedDate) return;
-    if (selectedHour && availableHours.includes(selectedHour)) return;
+    if (!selectedDate) return;
+    if (selectedHour !== null && availableHours.includes(selectedHour)) return;
     setSelectedHour(availableHours.length > 0 ? availableHours[0] : null);
-  }, [shop, selectedDate, availableHours]);
+  }, [selectedDate, availableHours]);
 
-  const handleSubmitBooking = async () => {
-    if (!mobileToken) {
-      showToast(t('SignInWithTelegram'), 'error');
-      startTelegramLogin();
+  // FEATURE: "Use my name and number" button from profile
+  const handleAutofillFromProfile = () => {
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+    const profileName = userInfo?.name || '';
+    const profilePhone = userInfo?.phone || '';
+
+    if (!profileName && !profilePhone) {
+      showToast('No saved profile info found. Please sign in or enter manually.', 'info');
       return;
     }
-    if (!selectedDate || !selectedHour || !selectedServiceId) {
-      showToast('Please select a service, date, and time slot', 'error');
+
+    setName(profileName);
+    setPhone(profilePhone);
+
+    // Name check: give non-blocking alert if symbols or inappropriate name
+    if (profileName) {
+      const check = checkAppropriateName(profileName);
+      if (!check.ok) {
+        setNameAlert('⚠️ Please consider using your real name so the specialist can identify you.');
+      } else {
+        setNameAlert(null);
+      }
+    }
+    showToast('Name and phone filled from profile!');
+  };
+
+  const handleNameChange = (val) => {
+    setName(val);
+    if (val.trim()) {
+      const check = checkAppropriateName(val);
+      if (!check.ok) {
+        setNameAlert('⚠️ Please consider using your real name so the specialist can identify you.');
+      } else {
+        setNameAlert(null);
+      }
+    } else {
+      setNameAlert(null);
+    }
+  };
+
+  // Submit Booking Request (matching Booking.jsx in barbershop-main)
+  const handleRequestBooking = async () => {
+    if (!selectedDate || selectedHour === null) {
+      Alert.alert('Required', t('Please select a valid date and time', 'Please select a valid date and time'));
+      return;
+    }
+    if (!selectedServiceId) {
+      Alert.alert('Required', t('PleaseSelectService', 'Please choose a service'));
       return;
     }
     if (!phone.trim()) {
-      showToast('Please enter your phone number', 'error');
+      Alert.alert('Required', 'Please enter your phone number');
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
       const bookingDate = new Date(selectedDate);
       bookingDate.setHours(parseInt(selectedHour, 10), 0, 0, 0);
 
@@ -283,7 +333,7 @@ export default function BookingScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${mobileToken}`,
+            ...(mobileToken ? { Authorization: `Bearer ${mobileToken}` } : {}),
           },
           body: bookingPayload,
         });
@@ -297,307 +347,357 @@ export default function BookingScreen() {
         throw new Error(data.message || 'Booking request failed');
       }
 
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
-      await refreshProfile();
-      setShowSuccessModal(true);
+      setIsModalOpen(false);
+      showToast(
+        `${t('YouRequestFor', 'Your request for')} ${shopName} ${t('has been sent.', 'has been sent.')} ${t('ConfirmationSoon', 'You will receive confirmation shortly.')}`
+      );
+      router.back();
     } catch (err) {
-      showToast(err.message, 'error');
+      Alert.alert('Booking Error', err.message || 'An error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !shop) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <BookingSheetSkeleton horizontalPadding={horizontalPadding} />
+        <BookingSheetSkeleton />
       </SafeAreaView>
     );
   }
 
-  if (!shop) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.topHeader, { paddingHorizontal: horizontalPadding }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="close" size={22} color={COLORS.text} />
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const workingDays = effectiveWorkingHours.flatMap((wh) => wh.days || []);
   const shopName =
     shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Animated Booking Success Modal modeled after components/card-success.svg */}
-      <BookingSuccessModal
-        visible={showSuccessModal}
-        title="So'rov yuborildi!"
-        subtitle={t('BookingSent')}
-        onClose={() => {
-          setShowSuccessModal(false);
-          router.replace('/(tabs)/profile');
-        }}
-      />
-
-      {/* Top Bar */}
-      <View style={[styles.topHeader, { paddingHorizontal: horizontalPadding }]}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Back Button */}
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="close" size={22} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={22} color="#F4F4F5" />
+          <Text style={styles.backText}>{t('Back', 'Back')}</Text>
         </Pressable>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>{t('BookNow')}</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>
-            {shopName}
-          </Text>
-        </View>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingHorizontal: horizontalPadding },
-          isTablet && styles.tabletSplit,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={isTablet ? styles.tabletCol : undefined}>
-          {/* 1. Choose Service */}
-          {shop.services?.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(300)} style={styles.cardSection}>
-              <Text style={styles.stepTitle}>{t('ChooseService')}</Text>
-              <View style={styles.chipsWrap}>
-                {shop.services.map((service) => {
-                  const active = String(selectedServiceId) === String(service._id);
-                  const sName =
-                    service.name?.[lang] ||
-                    service.name?.uz ||
-                    service.name?.ru ||
-                    service.name?.en;
-                  return (
-                    <Pressable
-                      key={service._id}
-                      onPress={() => {
-                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-                        setSelectedServiceId(service._id);
-                      }}
-                      style={[styles.serviceChip, active && styles.serviceChipActive]}
-                    >
-                      <Text
-                        style={[
-                          styles.serviceChipTitle,
-                          active && styles.serviceChipTitleActive,
-                        ]}
-                      >
-                        {sName}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.serviceChipSub,
-                          active && styles.serviceChipSubActive,
-                        ]}
-                      >
-                        {service.price?.toLocaleString()} {t('UZS')} · {service.durationMinutes}{' '}
-                        {t('min')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Animated.View>
-          )}
-
-          {/* 2. Choose Specialist / Barber styled after panel-booking-sheet.svg staff chips */}
-          {availableStaffForService.length > 0 && (
-            <Animated.View
-              entering={FadeInDown.delay(60).duration(300)}
-              style={styles.cardSection}
-            >
-              <Text style={styles.stepTitle}>{t('ChooseBarber')}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.barberRow}
-              >
-                <Pressable
-                  onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-                    setSelectedStaffId(null);
-                  }}
-                  style={[
-                    styles.barberChip,
-                    selectedStaffId === null && styles.barberChipActive,
-                  ]}
-                >
-                  <View style={styles.anyAvatar}>
-                    <Text style={{ fontSize: 18 }}>✨</Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.barberName,
-                      selectedStaffId === null && styles.barberNameActive,
-                    ]}
-                  >
-                    {t('AnyAvailable')}
-                  </Text>
-                </Pressable>
-
-                {availableStaffForService.map((member) => {
-                  const active = String(selectedStaffId) === String(member._id);
-                  return (
-                    <Pressable
-                      key={member._id}
-                      onPress={() => {
-                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-                        setSelectedStaffId(member._id);
-                      }}
-                      style={[styles.barberChip, active && styles.barberChipActive]}
-                    >
-                      <Image
-                        source={{
-                          uri:
-                            member.photo ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              member.name
-                            )}`,
-                        }}
-                        style={styles.barberAvatar}
-                      />
-                      <Text
-                        style={[styles.barberName, active && styles.barberNameActive]}
-                        numberOfLines={1}
-                      >
-                        {member.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </Animated.View>
-          )}
+        {/* Shop Cover Image & Header (matching Booking.jsx in barbershop-main) */}
+        <View style={styles.shopHeaderCard}>
+          <Image
+            source={{
+              uri:
+                shop.image ||
+                'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&q=80',
+            }}
+            style={styles.shopImage}
+            resizeMode="cover"
+          />
+          <Text style={styles.pageTitle}>{t('Book Your Visit', 'Book Your Visit')}</Text>
+          <Text style={styles.shopSub}>{shopName}</Text>
         </View>
 
-        <View style={isTablet ? styles.tabletCol : undefined}>
-          {/* 3. Choose Date */}
-          <Animated.View
-            entering={FadeInDown.delay(120).duration(300)}
-            style={styles.cardSection}
-          >
-            <Text style={styles.stepTitle}>{t('ChooseDate')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dateRow}
-            >
-              {dates.map((date) => {
-                const engDay = date.toLocaleDateString('en-US', { weekday: 'long' });
-                const isAvailableDay = workingDays.includes(engDay);
-                const active = selectedDate?.toDateString() === date.toDateString();
+        {/* Autofill from Profile Button */}
+        <View style={styles.autofillRow}>
+          <Pressable onPress={handleAutofillFromProfile} style={styles.autofillBtn}>
+            <Ionicons name="sparkles" size={15} color="#0A0A0C" />
+            <Text style={styles.autofillBtnText}>Use my name and number from profile</Text>
+          </Pressable>
+        </View>
 
-                return (
-                  <Pressable
-                    key={date.toISOString()}
-                    disabled={!isAvailableDay}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-                      setSelectedDate(date);
-                    }}
-                    style={[
-                      styles.datePill,
-                      active && styles.datePillActive,
-                      !isAvailableDay && styles.datePillDisabled,
-                    ]}
-                  >
-                    <Text style={[styles.dateDayName, active && styles.dateTextActive]}>
-                      {t(`days.${engDay}`, engDay)}
-                    </Text>
-                    <Text style={[styles.dateNumber, active && styles.dateTextActive]}>
-                      {date.getDate()}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Animated.View>
-
-          {/* 4. Choose Live Time Slot styled after components/time-picker.svg */}
-          <Animated.View
-            entering={FadeInDown.delay(180).duration(300)}
-            style={styles.cardSection}
-          >
-            <Text style={styles.stepTitle}>{t('ChooseTime')}</Text>
-            {availableHours.length === 0 ? (
-              <Text style={styles.noSlotsText}>
-                {selectedStaffOffThatDay
-                  ? t('StaffOffThatDay', { name: selectedStaffOffThatDay })
-                  : t('NoSlotsAvailable')}
-              </Text>
-            ) : (
-              <View style={styles.slotsGrid}>
-                {availableHours.map((hour) => {
-                  const active = selectedHour === hour;
-                  return (
-                    <Pressable
-                      key={hour}
-                      onPress={() => {
-                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-                        setSelectedHour(hour);
-                      }}
-                      style={[styles.slotPill, active && styles.slotPillActive]}
-                    >
-                      <Text style={[styles.slotText, active && styles.slotTextActive]}>
-                        {hour}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </Animated.View>
-
-          {/* 5. Customer Contact Details */}
-          <Animated.View
-            entering={FadeInDown.delay(240).duration(300)}
-            style={styles.cardSection}
-          >
-            <Text style={styles.stepTitle}>{t('YourDetails')}</Text>
+        {/* Form Inputs (matching Booking.jsx in barbershop-main) */}
+        <View style={styles.formCard}>
+          {/* Name Field */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>{t('Name', 'Name')}</Text>
             <TextInput
               value={name}
-              onChangeText={setName}
-              placeholder={t('EnterName')}
-              placeholderTextColor={COLORS.textFaint}
-              style={styles.input}
+              onChangeText={handleNameChange}
+              placeholder={t('Enter your name', 'Enter your name')}
+              placeholderTextColor="#64646D"
+              style={styles.textInput}
             />
+            {/* Non-blocking Name Warning Alert */}
+            {!!nameAlert && (
+              <View style={styles.nameAlertBanner}>
+                <Ionicons name="alert-circle" size={14} color="#F0B84C" />
+                <Text style={styles.nameAlertText}>{nameAlert}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Phone Number Field */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>{t('Phone Number', 'Phone Number')}</Text>
             <TextInput
               value={phone}
               onChangeText={setPhone}
+              placeholder="+998 (33) 3333333"
+              placeholderTextColor="#64646D"
               keyboardType="phone-pad"
-              placeholder="+998 90 123 45 67"
-              placeholderTextColor={COLORS.textFaint}
-              style={[styles.input, { marginTop: 10 }]}
+              style={styles.textInput}
             />
+          </View>
+        </View>
 
-            <Pressable
-              onPress={handleSubmitBooking}
-              disabled={isSubmitting || !selectedHour}
-              style={[
-                styles.confirmBtn,
-                (isSubmitting || !selectedHour) && { opacity: 0.5 },
-              ]}
-            >
-              <Text style={styles.confirmBtnText}>
-                {isSubmitting ? t('SendingRequest') : t('RequestBooking')}
-              </Text>
-            </Pressable>
-          </Animated.View>
+        {/* Main CTA: Select Date and Time button (matching Booking.jsx in barbershop-main) */}
+        <View style={styles.ctaWrap}>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+              setIsModalOpen(true);
+            }}
+            style={styles.selectDateTimeBtn}
+          >
+            <Text style={styles.selectDateTimeText}>
+              {t('Select Date and Time', 'Select Date and Time')}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
+
+      {/* Date & Time Picker Bottom Modal Sheet (matching Booking.jsx in barbershop-main) */}
+      <Modal
+        visible={isModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalHeaderTitle}>
+                {t('Choose a Time', 'Choose a Time')}
+              </Text>
+              <Pressable
+                onPress={() => setIsModalOpen(false)}
+                style={styles.closeBtn}
+              >
+                <Ionicons name="close" size={22} color="#9C9CA6" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              {/* 1. Choose Service */}
+              {shop.services?.length > 0 && (
+                <View style={styles.modalSection}>
+                  <Text style={styles.sectionSubtitle}>
+                    {t('ChooseService', 'Choose a Service')}
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.serviceRow}
+                  >
+                    {shop.services.map((service) => {
+                      const isSelected = selectedServiceId === service._id;
+                      return (
+                        <Pressable
+                          key={service._id}
+                          onPress={() => setSelectedServiceId(service._id)}
+                          style={[
+                            styles.serviceChip,
+                            isSelected && styles.serviceChipActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.serviceChipTitle,
+                              isSelected && styles.serviceChipTitleActive,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {service.name?.[lang] || service.name?.en}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.serviceChipSub,
+                              isSelected && styles.serviceChipSubActive,
+                            ]}
+                          >
+                            {service.price?.toLocaleString()} · {service.durationMinutes} min
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* 2. Choose Specialist / Barber */}
+              {availableStaffForService.length > 0 && (
+                <View style={styles.modalSection}>
+                  <Text style={styles.sectionSubtitle}>
+                    {t('ChooseBarber', 'Choose a Specialist')}
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.barberRow}
+                  >
+                    {/* Any Available */}
+                    <Pressable
+                      onPress={() => setSelectedStaffId(null)}
+                      style={[
+                        styles.barberChip,
+                        selectedStaffId === null && styles.barberChipActive,
+                      ]}
+                    >
+                      <View style={styles.anyAvatarCircle}>
+                        <Text style={{ fontSize: 16 }}>✨</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.barberChipText,
+                          selectedStaffId === null && styles.barberChipTextActive,
+                        ]}
+                      >
+                        {t('AnyAvailable', 'Any Available')}
+                      </Text>
+                    </Pressable>
+
+                    {/* Staff members */}
+                    {availableStaffForService.map((member) => {
+                      const isSelected = selectedStaffId === member._id;
+                      return (
+                        <Pressable
+                          key={member._id}
+                          onPress={() => setSelectedStaffId(member._id)}
+                          style={[
+                            styles.barberChip,
+                            isSelected && styles.barberChipActive,
+                          ]}
+                        >
+                          <Image
+                            source={{
+                              uri:
+                                member.photo ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  member.name
+                                )}&background=212127&color=F4F4F5`,
+                            }}
+                            style={styles.barberAvatar}
+                          />
+                          <Text
+                            style={[
+                              styles.barberChipText,
+                              isSelected && styles.barberChipTextActive,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {member.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* 3. Choose Date */}
+              <View style={styles.modalSection}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.dateRow}
+                >
+                  {dates.map((date) => {
+                    const engDay = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const isAvailable = workingDays.includes(engDay);
+                    const isSelected = selectedDate?.toDateString() === date.toDateString();
+
+                    return (
+                      <Pressable
+                        key={date.toISOString()}
+                        disabled={!isAvailable}
+                        onPress={() => setSelectedDate(date)}
+                        style={[
+                          styles.dateChip,
+                          isSelected && styles.dateChipActive,
+                          !isAvailable && styles.dateChipDisabled,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.dateDayText,
+                            isSelected && styles.dateDayTextActive,
+                          ]}
+                        >
+                          {date.toLocaleDateString(lang, { weekday: 'short' })}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.dateNumText,
+                            isSelected && styles.dateNumTextActive,
+                          ]}
+                        >
+                          {date.toLocaleDateString(lang, { month: 'short', day: 'numeric' })}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* 4. Choose Time Slots */}
+              <View style={styles.modalSection}>
+                <Text style={styles.sectionSubtitle}>
+                  {t('ChooseTime', 'Available Time Slots')}
+                </Text>
+                {availableHours.length > 0 ? (
+                  <View style={styles.hoursGrid}>
+                    {availableHours.map((hour) => {
+                      const isSelected = selectedHour === hour;
+                      return (
+                        <Pressable
+                          key={hour}
+                          onPress={() => setSelectedHour(hour)}
+                          style={[
+                            styles.hourPill,
+                            isSelected && styles.hourPillActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.hourPillText,
+                              isSelected && styles.hourPillTextActive,
+                            ]}
+                          >
+                            {hour}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.noHoursBox}>
+                    <Text style={styles.noHoursText}>
+                      {t('NoSlotsAvailable', 'No available time slots for this day.')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Confirm Booking Button in Bottom Sheet */}
+              <View style={{ padding: 16 }}>
+                <Pressable
+                  onPress={handleRequestBooking}
+                  disabled={selectedHour === null || !selectedServiceId || isSubmitting}
+                  style={[
+                    styles.confirmBookingBtn,
+                    (selectedHour === null || !selectedServiceId || isSubmitting) &&
+                      styles.btnDisabled,
+                  ]}
+                >
+                  <Text style={styles.confirmBookingText}>
+                    {isSubmitting
+                      ? t('SendingRequest', 'Sending Request...')
+                      : t('Request Booking', 'Request Booking')}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -605,235 +705,347 @@ export default function BookingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#0A0A0C', // var(--color-bg)
   },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: COLORS.borderSoft,
+  container: {
+    padding: 16,
+    paddingBottom: 40,
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  backText: {
+    color: '#D4AF5A',
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 15,
+  },
+  shopHeaderCard: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  shopImage: {
+    width: '100%',
+    height: 190, // h-48 in web app
+    borderRadius: 14,
+    marginBottom: 14,
+    backgroundColor: '#131317',
+  },
+  pageTitle: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.displayBold,
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  shopSub: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 15,
+  },
+  autofillRow: {
+    marginBottom: 14,
+  },
+  autofillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#D4AF5A', // gold accent
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    shadowColor: '#D4AF5A',
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  autofillBtnText: {
+    color: '#0A0A0C',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  formCard: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  inputLabel: {
+    color: '#9C9CA6', // var(--color-text-muted)
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13.5,
+  },
+  textInput: {
+    backgroundColor: '#1A1A1F', // var(--color-surface-2)
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#27272E', // var(--color-border)
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 15,
+  },
+  nameAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(240, 184, 76, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 7,
+    marginTop: 4,
+  },
+  nameAlertText: {
+    color: '#F0B84C', // warning gold
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 11.5,
+    flex: 1,
+  },
+  ctaWrap: {
+    marginTop: 8,
+  },
+  selectDateTimeBtn: {
+    backgroundColor: '#D4AF5A', // var(--color-accent)
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#D4AF5A',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  selectDateTimeText: {
+    color: '#0A0A0C',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16.5,
+    fontWeight: '700',
+  },
+
+  // Modal Sheet (matching Booking.jsx in barbershop-main)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#131317', // var(--color-surface)
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: '#27272E',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#27272E',
+  },
+  modalHeaderTitle: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1A1A1F',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    color: COLORS.text,
-    fontFamily: FONTS.displaySemiBold,
-    fontSize: 18,
-    fontWeight: '600',
+  modalScroll: {
+    paddingBottom: 24,
   },
-  headerSub: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodyRegular,
-    fontSize: 13,
+  modalSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E1E24',
   },
-  scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 48,
+  sectionSubtitle: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  tabletSplit: {
-    flexDirection: 'row',
-    gap: 20,
-    alignItems: 'flex-start',
-  },
-  tabletCol: {
-    flex: 1,
-  },
-  cardSection: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  stepTitle: {
-    color: COLORS.text,
-    fontFamily: FONTS.displaySemiBold,
-    fontSize: 16.5,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  chipsWrap: {
+  serviceRow: {
     gap: 8,
   },
   serviceChip: {
-    backgroundColor: COLORS.surface2,
-    padding: 13,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    minWidth: 125,
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+    borderRadius: 12,
+    padding: 10,
   },
   serviceChipActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+    backgroundColor: '#D4AF5A',
+    borderColor: '#D4AF5A',
   },
   serviceChipTitle: {
-    color: COLORS.text,
+    color: '#F4F4F5',
     fontFamily: FONTS.bodyBold,
+    fontSize: 12.5,
     fontWeight: '700',
-    fontSize: 14.5,
+    marginBottom: 4,
   },
   serviceChipTitleActive: {
-    color: COLORS.bg,
+    color: '#0A0A0C',
   },
   serviceChipSub: {
-    color: COLORS.textMuted,
+    color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: 11,
   },
   serviceChipSubActive: {
-    color: COLORS.bg,
-    fontFamily: FONTS.bodySemiBold,
-    fontWeight: '600',
+    color: '#0A0A0C',
+    opacity: 0.85,
   },
   barberRow: {
     gap: 10,
   },
   barberChip: {
-    width: 96,
-    backgroundColor: COLORS.surface2,
-    borderRadius: 16,
-    padding: 10,
+    minWidth: 70,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+    borderRadius: 12,
+    padding: 8,
   },
   barberChipActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+    backgroundColor: '#D4AF5A',
+    borderColor: '#D4AF5A',
   },
-  anyAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surface3,
+  anyAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#27272E',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   barberAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginBottom: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 4,
+    backgroundColor: '#27272E',
   },
-  barberName: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12.5,
-    fontWeight: '500',
+  barberChipText: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
   },
-  barberNameActive: {
-    color: COLORS.bg,
-    fontFamily: FONTS.bodyBold,
+  barberChipTextActive: {
+    color: '#0A0A0C',
     fontWeight: '700',
   },
   dateRow: {
-    gap: 10,
+    gap: 8,
   },
-  datePill: {
-    minWidth: 72,
-    backgroundColor: COLORS.surface2,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
+  dateChip: {
+    minWidth: 85,
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
   },
-  datePillActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+  dateChipActive: {
+    backgroundColor: '#D4AF5A',
+    borderColor: '#D4AF5A',
   },
-  datePillDisabled: {
-    opacity: 0.35,
+  dateChipDisabled: {
+    opacity: 0.4,
   },
-  dateDayName: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dateNumber: {
-    color: COLORS.text,
+  dateDayText: {
+    color: '#F4F4F5',
     fontFamily: FONTS.bodyBold,
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '700',
+  },
+  dateDayTextActive: {
+    color: '#0A0A0C',
+  },
+  dateNumText: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 11,
     marginTop: 2,
   },
-  dateTextActive: {
-    color: COLORS.bg,
+  dateNumTextActive: {
+    color: '#0A0A0C',
   },
-  slotsGrid: {
+  hoursGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
-  slotPill: {
-    minWidth: 86,
-    height: 46,
-    backgroundColor: COLORS.surface2,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+  hourPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#1A1A1F',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#27272E',
   },
-  slotPillActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+  hourPillActive: {
+    backgroundColor: '#D4AF5A',
+    borderColor: '#D4AF5A',
   },
-  slotText: {
-    color: COLORS.textMuted,
+  hourPillText: {
+    color: '#F4F4F5',
     fontFamily: FONTS.bodySemiBold,
-    fontWeight: '600',
     fontSize: 13,
   },
-  slotTextActive: {
-    color: COLORS.bg,
-    fontFamily: FONTS.bodyBold,
+  hourPillTextActive: {
+    color: '#0A0A0C',
     fontWeight: '700',
   },
-  noSlotsText: {
-    color: COLORS.textMuted,
+  noHoursBox: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  noHoursText: {
+    color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
     fontSize: 13,
-    paddingVertical: 12,
-    textAlign: 'center',
   },
-  input: {
-    backgroundColor: COLORS.surface2,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: COLORS.text,
-    fontFamily: FONTS.bodyRegular,
-    fontSize: 14.5,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  confirmBtn: {
-    backgroundColor: COLORS.accent,
-    height: 50,
+  confirmBookingBtn: {
+    backgroundColor: '#D4AF5A',
+    paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
   },
-  confirmBtnText: {
-    color: COLORS.bg,
+  btnDisabled: {
+    opacity: 0.5,
+  },
+  confirmBookingText: {
+    color: '#0A0A0C',
     fontFamily: FONTS.bodyBold,
-    fontSize: 14.5,
+    fontSize: 16,
     fontWeight: '700',
   },
 });
