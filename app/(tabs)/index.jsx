@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
-  Image,
+  TextInput,
   ScrollView,
   Pressable,
   RefreshControl,
@@ -18,16 +18,35 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
-import { ShopCard } from '../../src/components/ShopCard';
-import { MOTION_ASSETS, SmartChairLogoMark } from '../../src/components/BrandAssets';
+import { CatalogCard } from '../../src/components/CatalogCard';
 import { HomeFeedSkeleton } from '../../src/components/Skeletons';
 
-const CATEGORIES = [
-  { key: 'All', icon: 'grid-outline' },
-  { key: 'Barbershop', icon: 'cut-outline' },
-  { key: 'Beauty Salon', icon: 'sparkles-outline' },
-  { key: 'Spa', icon: 'leaf-outline' },
-  { key: 'Dentist', icon: 'medkit-outline' },
+// Standard categories matching categories.json in barbershop-main
+const DEFAULT_CATEGORIES = [
+  {
+    id: '1',
+    key: 'Barbershop',
+    icon: '✂️',
+    title: { en: 'Barbershop', uz: 'Sartaroshxona', ru: 'Барбершоп' },
+  },
+  {
+    id: '2',
+    key: 'Hair Salon',
+    icon: '💇',
+    title: { en: 'Hair Salon', uz: 'Soch Saloni', ru: 'Парикмахерская' },
+  },
+  {
+    id: '3',
+    key: 'Nail Salon',
+    icon: '💅',
+    title: { en: 'Nail Salon', uz: 'Tirnoq Saloni', ru: 'Ногтевой Салон' },
+  },
+  {
+    id: '4',
+    key: 'Beauty Spas',
+    icon: '🧖',
+    title: { en: 'Beauty Spas', uz: "Go'zallik Spasi", ru: 'СПА-салоны' },
+  },
 ];
 
 const LANGUAGES = [
@@ -42,69 +61,76 @@ export default function HomeScreen() {
   const currentLang = i18n.language || 'uz';
   const {
     shops,
+    feedData,
     isLoading,
     refreshShops,
-    isSocketConnected,
     changeLanguage,
     userInfo,
+    isSocketConnected,
   } = useAppContext();
-  const { isTablet, numColumns, horizontalPadding } = useResponsive();
+  const { isTablet, horizontalPadding } = useResponsive();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredShops = useMemo(() => {
-    if (selectedCategory === 'All') return shops;
-    return shops.filter(
-      (s) => String(s.category || '').toLowerCase() === selectedCategory.toLowerCase()
+  const userName = userInfo?.name ? userInfo.name.split(' ')[0] : 'Guest';
+
+  // Categories visible based on selection (matching Catalog.jsx)
+  const visibleCategories = useMemo(() => {
+    if (selectedCategory === 'All') return DEFAULT_CATEGORIES;
+    return DEFAULT_CATEGORIES.filter(
+      (cat) => cat.title.en.toLowerCase() === selectedCategory.toLowerCase() ||
+               cat.key.toLowerCase() === selectedCategory.toLowerCase()
     );
-  }, [shops, selectedCategory]);
+  }, [selectedCategory]);
 
-  const handleCategorySelect = (cat) => {
-    if (Platform.OS !== 'web') {
-      Haptics.selectionAsync().catch(() => {});
+  const handleSearchSubmit = () => {
+    if (searchTerm.trim()) {
+      if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+      router.push({
+        pathname: '/(tabs)/search',
+        params: { query: searchTerm.trim() },
+      });
     }
-    setSelectedCategory(cat);
+  };
+
+  const handleCategorySelect = (catKey) => {
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+    setSelectedCategory(catKey);
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingHorizontal: horizontalPadding },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading && shops.length > 0}
-            onRefresh={refreshShops}
-            tintColor={COLORS.accent}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Top Bar: Official 2x2 Mark + Fraunces Wordmark + Live Sync + Language Switcher */}
-        <Animated.View entering={FadeInDown.duration(350)} style={styles.headerRow}>
-          <View style={styles.brandBlock}>
-            <View style={styles.logoBadge}>
-              <SmartChairLogoMark size={28} />
+      {/* 1. Header (Faithfully replicating Home.jsx in barbershop-main) */}
+      <View style={styles.header}>
+        {/* Top row: Profile + Greeting + Language Selector */}
+        <View style={styles.topRow}>
+          <Pressable
+            onPress={() => router.push('/(tabs)/profile')}
+            style={styles.profileBtn}
+          >
+            <View style={styles.userIconCircle}>
+              <Ionicons name="person-outline" size={18} color="#9C9CA6" />
             </View>
-            <View>
-              <Text style={styles.brandTitleText}>
-                Smart<Text style={{ color: COLORS.accent }}>Chair</Text>
+            <View style={styles.greetingCol}>
+              <Text style={styles.welcomeText}>
+                {t('welcome_message', 'Hello')}, {userName}
               </Text>
-              <View style={styles.syncRow}>
-                <View
-                  style={[
-                    styles.syncDot,
-                    { backgroundColor: isSocketConnected ? COLORS.success : COLORS.warning },
-                  ]}
-                />
-                <Text style={styles.syncText}>{t('LiveSyncActive')}</Text>
-              </View>
+              <Text style={styles.greetingTitle}>
+                {t('greeting', 'Welcome')}
+              </Text>
             </View>
-          </View>
+          </Pressable>
 
-          <View style={styles.headerRight}>
+          <View style={styles.topActionsRow}>
+            {/* Live Socket Dot */}
+            <View
+              style={[
+                styles.liveDot,
+                { backgroundColor: isSocketConnected ? COLORS.success : COLORS.warning },
+              ]}
+            />
+            {/* Language Toggle Pill (matching languageDropdown.jsx) */}
             <View style={styles.langPill}>
               {LANGUAGES.map((l) => (
                 <Pressable
@@ -127,86 +153,164 @@ export default function HomeScreen() {
               ))}
             </View>
           </View>
-        </Animated.View>
+        </View>
 
-        {/* Hero Section with Search Field styled after components/search-bar.svg */}
-        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={styles.heroCard}>
-          <View style={styles.heroTextCol}>
-            <Text style={styles.heroTitle}>
-              {userInfo?.name ? `${userInfo.name.split(' ')[0]}, ` : ''}
-              {t('DiscoverTitle')}
-            </Text>
-            <Text style={styles.heroSubtitle}>{t('DiscoverSubtitle')}</Text>
-          </View>
-          <Pressable
-            onPress={() => router.push('/(tabs)/search')}
-            style={styles.searchBarTrigger}
-          >
-            <Image
-              source={MOTION_ASSETS.icons.search}
-              style={{ width: 18, height: 18, tintColor: COLORS.accent }}
-              resizeMode="contain"
+        {/* Search Bar (matching searchbar.jsx in barbershop-main) */}
+        <View style={styles.searchBarRow}>
+          <View style={styles.searchInputWrap}>
+            <Ionicons
+              name="search"
+              size={18}
+              color="#64646D"
+              style={styles.searchIcon}
             />
-            <Text style={styles.searchBarPlaceholder} numberOfLines={1}>
-              {t('SearchPlaceholder')}
-            </Text>
-            <View style={styles.boltPill}>
-              <Ionicons name="flash" size={12} color={COLORS.bg} />
-              <Text style={styles.boltText}>{t('FindAvailableNow')}</Text>
-            </View>
-          </Pressable>
-        </Animated.View>
+            <TextInput
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              onSubmitEditing={handleSearchSubmit}
+              placeholder={t('searchbar', 'Search for barbershops, salons...')}
+              placeholderTextColor="#64646D"
+              style={styles.searchInput}
+              returnKeyType="search"
+            />
+            <Pressable
+              onPress={handleSearchSubmit}
+              style={styles.searchSubmitBtn}
+            >
+              <Text style={styles.searchSubmitText}>{t('search', 'Search')}</Text>
+            </Pressable>
+          </View>
+        </View>
 
-        {/* Category Filter Chips styled after components/chip-pill-on.svg & chip-pill-off.svg */}
+        {/* Category Carousel (matching Carusel.jsx in barbershop-main) */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesRow}
+          contentContainerStyle={styles.carouselContainer}
         >
-          {CATEGORIES.map((cat) => {
-            const active = selectedCategory === cat.key;
+          {/* "All" button */}
+          <Pressable
+            onPress={() => handleCategorySelect('All')}
+            style={[
+              styles.categoryPill,
+              selectedCategory === 'All'
+                ? styles.categoryPillActive
+                : styles.categoryPillInactive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.categoryPillText,
+                selectedCategory === 'All'
+                  ? styles.categoryPillTextActive
+                  : styles.categoryPillTextInactive,
+              ]}
+            >
+              {t('FullCategories', 'All')}
+            </Text>
+          </Pressable>
+
+          {/* Category Pills */}
+          {DEFAULT_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.title.en || selectedCategory === cat.key;
             return (
               <Pressable
-                key={cat.key}
-                onPress={() => handleCategorySelect(cat.key)}
-                style={[styles.categoryPill, active && styles.categoryPillActive]}
+                key={cat.id}
+                onPress={() => handleCategorySelect(cat.title.en)}
+                style={[
+                  styles.categoryPill,
+                  isSelected
+                    ? styles.categoryPillActive
+                    : styles.categoryPillInactive,
+                ]}
               >
-                <Ionicons
-                  name={cat.icon}
-                  size={15}
-                  color={active ? COLORS.bg : COLORS.textMuted}
-                />
+                <Text style={styles.categoryEmoji}>{cat.icon}</Text>
                 <Text
                   style={[
                     styles.categoryPillText,
-                    active && styles.categoryPillTextActive,
+                    isSelected
+                      ? styles.categoryPillTextActive
+                      : styles.categoryPillTextInactive,
                   ]}
                 >
-                  {t(cat.key.replace(' ', ''), cat.key)}
+                  {cat.title[currentLang] || cat.title.en}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
+      </View>
 
-        {/* Shimmering Skeleton Grid while loading from server, then Animated Shop Grid */}
+      {/* 2. Main Content (Catalog Sections matching Catalog.jsx) */}
+      <ScrollView
+        contentContainerStyle={[
+          styles.mainScrollContent,
+          { paddingHorizontal: horizontalPadding },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading && shops.length > 0}
+            onRefresh={refreshShops}
+            tintColor={COLORS.accent}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading && shops.length === 0 ? (
-          <HomeFeedSkeleton numColumns={numColumns} />
+          <HomeFeedSkeleton numColumns={isTablet ? 3 : 2} />
         ) : (
-          <View style={[styles.gridContainer, isTablet && styles.gridContainerTablet]}>
-            {filteredShops.map((shop, idx) => (
-              <View
-                key={shop._id}
-                style={[
-                  styles.gridItem,
-                  numColumns === 2 && styles.gridItemTwoCol,
-                  numColumns === 3 && styles.gridItemThreeCol,
-                ]}
-              >
-                <ShopCard shop={shop} index={idx} />
+          visibleCategories.map((category) => {
+            // Find shops for this category from feedData or fallback to filtered shops array
+            const feedGroup = feedData.find(
+              (f) => String(f.category || '').toLowerCase() === category.title.en.toLowerCase()
+            );
+            const categoryShops =
+              feedGroup?.shops?.length > 0
+                ? feedGroup.shops
+                : shops.filter(
+                    (s) =>
+                      String(s.category || '').toLowerCase() ===
+                      category.title.en.toLowerCase()
+                  );
+
+            return (
+              <View key={category.id} style={styles.catalogSection}>
+                {/* Category Header Row: Title + "See All" */}
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>
+                    {category.title[currentLang] || category.title.en}
+                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(tabs)/search',
+                        params: { category: category.title.en },
+                      })
+                    }
+                  >
+                    <Text style={styles.seeAllText}>{t('SeeAll', 'See All')}</Text>
+                  </Pressable>
+                </View>
+
+                {/* Horizontal Scrolling Shop Cards (matching Catalog.jsx) */}
+                {categoryShops.length > 0 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalCardRow}
+                  >
+                    {categoryShops.map((shop) => (
+                      <CatalogCard key={shop._id} shop={shop} />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <Text style={styles.emptyCategoryText}>
+                    {t('no_services_available', 'No services available in this category')}
+                  </Text>
+                )}
               </View>
-            ))}
-          </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -216,189 +320,197 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#0A0A0C', // var(--color-bg)
   },
-  scrollContent: {
-    paddingBottom: 32,
+  header: {
+    backgroundColor: 'rgba(10, 10, 12, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1D1D23', // var(--color-border-soft)
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  headerRow: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
-  brandBlock: {
+  profileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  logoBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+  userIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#27272E',
+    backgroundColor: '#131317',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandTitleText: {
+  greetingCol: {
+    justifyContent: 'center',
+  },
+  welcomeText: {
+    color: '#9C9CA6', // var(--color-text-muted)
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 12,
+  },
+  greetingTitle: {
+    color: '#F4F4F5', // var(--color-text)
     fontFamily: FONTS.displayBold,
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#F4F4F5',
-    letterSpacing: -0.3,
   },
-  syncRow: {
+  topActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 2,
+    gap: 10,
   },
-  syncDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  syncText: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   langPill: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#131317',
     borderRadius: 10,
     padding: 3,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: '#27272E',
   },
   langBtn: {
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 7,
   },
   langBtnActive: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: '#D4AF5A', // var(--color-accent)
   },
   langBtnText: {
-    color: COLORS.textMuted,
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  langBtnTextActive: {
+    color: '#0A0A0C',
+  },
+  searchBarRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  searchInputWrap: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1F', // var(--color-surface-2)
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#27272E',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
+    height: '100%',
+    paddingRight: 64,
+  },
+  searchSubmitBtn: {
+    position: 'absolute',
+    right: 8,
+    backgroundColor: '#D4AF5A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  searchSubmitText: {
+    color: '#0A0A0C',
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
     fontWeight: '700',
   },
-  langBtnTextActive: {
-    color: COLORS.bg,
-  },
-  heroCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    padding: 18,
-    marginTop: 8,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  heroTextCol: {
-    marginBottom: 14,
-  },
-  heroTitle: {
-    color: COLORS.text,
-    fontFamily: FONTS.displaySemiBold,
-    fontSize: 23,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodyRegular,
-    fontSize: 13.5,
-  },
-  searchBarTrigger: {
-    backgroundColor: COLORS.surface2,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  searchBarPlaceholder: {
-    color: COLORS.textFaint,
-    fontFamily: FONTS.bodyRegular,
-    fontSize: 13.5,
-    flex: 1,
-  },
-  boltPill: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  boltText: {
-    color: COLORS.bg,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  categoriesRow: {
-    gap: 10,
-    paddingBottom: 18,
+  carouselContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 8,
   },
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surface2,
     paddingHorizontal: 14,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
   },
   categoryPillActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+    backgroundColor: '#D4AF5A',
+  },
+  categoryPillInactive: {
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+  },
+  categoryEmoji: {
+    fontSize: 13,
   },
   categoryPillText: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12.5,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    fontWeight: '600',
   },
   categoryPillTextActive: {
-    color: COLORS.bg,
+    color: '#0A0A0C',
+  },
+  categoryPillTextInactive: {
+    color: '#9C9CA6',
+  },
+  mainScrollContent: {
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  catalogSection: {
+    marginBottom: 24,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  seeAllText: {
+    color: '#D4AF5A',
     fontFamily: FONTS.bodyBold,
+    fontSize: 13,
     fontWeight: '700',
   },
-  gridContainer: {
-    flexDirection: 'column',
+  horizontalCardRow: {
+    paddingVertical: 4,
   },
-  gridContainerTablet: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -8,
-  },
-  gridItem: {
-    width: '100%',
-  },
-  gridItemTwoCol: {
-    width: '50%',
-    paddingHorizontal: 8,
-  },
-  gridItemThreeCol: {
-    width: '33.333%',
-    paddingHorizontal: 8,
+  emptyCategoryText: {
+    color: '#64646D',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13,
+    fontStyle: 'italic',
+    paddingVertical: 8,
   },
 });
