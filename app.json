@@ -41,7 +41,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow SmartChair to use your location to find nearby barbershops."
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }
