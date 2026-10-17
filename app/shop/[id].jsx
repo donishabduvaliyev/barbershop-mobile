@@ -6,20 +6,23 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
+import { MOTION_ASSETS } from '../../src/components/BrandAssets';
+import { ShopDetailSkeleton } from '../../src/components/Skeletons';
+
+const normParam = (v) => (Array.isArray(v) ? v[0] : v);
 
 export default function ShopDetailScreen() {
-  const { id: rawId } = useLocalSearchParams();
-  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const params = useLocalSearchParams();
+  const id = normParam(params.id);
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
@@ -49,8 +52,8 @@ export default function ShopDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={COLORS.accent} />
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <ShopDetailSkeleton horizontalPadding={horizontalPadding} />
       </SafeAreaView>
     );
   }
@@ -117,7 +120,11 @@ export default function ShopDetailScreen() {
               <View style={styles.titleRow}>
                 <Text style={styles.shopTitle}>{shopName}</Text>
                 <View style={styles.ratingPill}>
-                  <Ionicons name="star" size={15} color={COLORS.accent} />
+                  <Image
+                    source={MOTION_ASSETS.icons.star}
+                    style={{ width: 14, height: 14, tintColor: COLORS.accent }}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.ratingValue}>
                     {Number(shop.rating || 5.0).toFixed(1)}
                   </Text>
@@ -127,14 +134,22 @@ export default function ShopDetailScreen() {
 
               {!!shopAddress && (
                 <View style={styles.metaRow}>
-                  <Ionicons name="location-outline" size={16} color={COLORS.accent} />
+                  <Image
+                    source={MOTION_ASSETS.icons.mapPin}
+                    style={{ width: 16, height: 16, tintColor: COLORS.accent }}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.metaText}>{shopAddress}</Text>
                 </View>
               )}
 
               {shop.phone && (
                 <View style={styles.metaRow}>
-                  <Ionicons name="call-outline" size={16} color={COLORS.accent} />
+                  <Image
+                    source={MOTION_ASSETS.icons.phone}
+                    style={{ width: 16, height: 16, tintColor: COLORS.accent }}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.metaText}>{shop.phone}</Text>
                 </View>
               )}
@@ -217,7 +232,7 @@ export default function ShopDetailScreen() {
                             member.photo ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
                               member.name
-                            )}&background=293548&color=FFF`,
+                            )}&background=212127&color=F4F4F5`,
                         }}
                         style={styles.staffAvatar}
                       />
@@ -228,7 +243,11 @@ export default function ShopDetailScreen() {
                         {member.role || 'Master'}
                       </Text>
                       <View style={styles.staffRatingRow}>
-                        <Ionicons name="star" size={12} color={COLORS.accent} />
+                        <Image
+                          source={MOTION_ASSETS.icons.star}
+                          style={{ width: 12, height: 12, tintColor: COLORS.accent }}
+                          resizeMode="contain"
+                        />
                         <Text style={styles.staffRatingText}>
                           {Number(member.rating || 5.0).toFixed(1)}
                         </Text>
@@ -261,13 +280,12 @@ export default function ShopDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Book CTA */}
+      {/* Sticky Bottom Book CTA styled after button-primary.svg */}
       <View style={styles.bottomBar}>
         <Pressable
           onPress={() => router.push(`/booking/${shop._id}`)}
           style={styles.bookCtaBtn}
         >
-          <Ionicons name="calendar" size={18} color="#000" />
           <Text style={styles.bookCtaText}>{t('BookNow')}</Text>
         </Pressable>
       </View>
@@ -307,7 +325,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(11, 15, 23, 0.72)',
+    backgroundColor: 'rgba(10, 10, 12, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -327,11 +345,11 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -341,27 +359,32 @@ const styles = StyleSheet.create({
   },
   shopTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '600',
     flex: 1,
     marginRight: 10,
   },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     backgroundColor: COLORS.surface2,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   ratingValue: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
   reviewsCount: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 12,
   },
   metaRow: {
@@ -372,21 +395,23 @@ const styles = StyleSheet.create({
   },
   metaText: {
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
     flex: 1,
   },
   sectionCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   sectionTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 12,
   },
   serviceRow: {
@@ -399,11 +424,13 @@ const styles = StyleSheet.create({
   },
   serviceName: {
     color: COLORS.text,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   serviceDuration: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 12,
     marginTop: 2,
   },
@@ -414,6 +441,7 @@ const styles = StyleSheet.create({
   },
   servicePrice: {
     color: COLORS.accent,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -426,6 +454,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   staffAvatar: {
     width: 58,
@@ -436,11 +466,13 @@ const styles = StyleSheet.create({
   },
   staffName: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13.5,
   },
   staffRole: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 11,
     marginTop: 2,
   },
@@ -452,6 +484,7 @@ const styles = StyleSheet.create({
   },
   staffRatingText: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -462,11 +495,13 @@ const styles = StyleSheet.create({
   },
   hoursDays: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     flex: 1,
   },
   hoursTime: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -478,21 +513,20 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderSoft,
+    borderTopWidth: 1.5,
+    borderTopColor: COLORS.border,
   },
   bookCtaBtn: {
     backgroundColor: COLORS.accent,
-    paddingVertical: 15,
-    borderRadius: 14,
-    flexDirection: 'row',
+    height: 50,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
   bookCtaText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '800',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

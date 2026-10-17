@@ -15,10 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { ShopCard } from '../../src/components/ShopCard';
+import {
+  MOTION_ASSETS,
+  SmartChairLogoMark,
+  StatusBadge,
+} from '../../src/components/BrandAssets';
+import { ProfileBookingsSkeleton } from '../../src/components/Skeletons';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -42,6 +48,7 @@ export default function ProfileScreen() {
   const { isTablet, numColumns, horizontalPadding } = useResponsive();
 
   const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' | 'favorites' | 'details'
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const [editName, setEditName] = useState(userInfo?.name || '');
   const [editPhone, setEditPhone] = useState(userInfo?.phone || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -53,6 +60,12 @@ export default function ProfileScreen() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const favoriteShops = shops.filter((s) => favoriteIds.has(String(s._id)));
+
+  const handleManualRefresh = async () => {
+    setIsRefreshingProfile(true);
+    await refreshProfile();
+    setIsRefreshingProfile(false);
+  };
 
   const handleSaveProfile = async () => {
     if (!mobileToken) return;
@@ -135,21 +148,25 @@ export default function ProfileScreen() {
     }
   };
 
-  // Unauthenticated View -> 1-Tap Telegram Bot Deep-Link Auth
+  // Unauthenticated View -> 1-Tap Telegram Bot Deep-Link Auth + Motion Benefit Cards
   if (!mobileToken || !userInfo) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.authCenterBox}>
+        <ScrollView contentContainerStyle={styles.authScrollContent} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.springify()} style={styles.authCard}>
-            <View style={styles.tgIconCircle}>
-              <Ionicons name="paper-plane" size={34} color={COLORS.telegram} />
+            <View style={styles.markWrap}>
+              <SmartChairLogoMark size={52} pulse />
             </View>
-            <Text style={styles.authTitle}>SmartChair</Text>
+            <Image
+              source={MOTION_ASSETS.logos.wordmarkOutlined}
+              style={styles.authWordmark}
+              resizeMode="contain"
+            />
             <Text style={styles.authSubtitle}>{t('SignInSubtitle')}</Text>
 
             {isAuthenticating ? (
               <View style={styles.waitingBox}>
-                <ActivityIndicator size="large" color={COLORS.telegram} />
+                <ActivityIndicator size="large" color={COLORS.accent} />
                 <Text style={styles.waitingText}>{t('WaitingForTelegram')}</Text>
 
                 {authSession?.webDeepLink && (
@@ -167,28 +184,51 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <Pressable onPress={startTelegramLogin} style={styles.telegramLoginBtn}>
-                <Ionicons name="paper-plane" size={20} color="#FFF" />
+                <Image
+                  source={MOTION_ASSETS.icons.telegram}
+                  style={{ width: 20, height: 20, tintColor: '#FFF' }}
+                  resizeMode="contain"
+                />
                 <Text style={styles.telegramLoginText}>{t('SignInWithTelegram')}</Text>
               </Pressable>
             )}
           </Animated.View>
-        </View>
+
+          {/* Animated SmartChair Benefit Cards from SmartChair_Motion_Assets_PNG */}
+          <Animated.View entering={FadeInDown.delay(140).duration(400)} style={styles.benefitsRow}>
+            <Image
+              source={MOTION_ASSETS.components.benefit247}
+              style={styles.benefitImg}
+              resizeMode="contain"
+            />
+            <Image
+              source={MOTION_ASSETS.components.benefitFewerNoShows}
+              style={styles.benefitImg}
+              resizeMode="contain"
+            />
+            <Image
+              source={MOTION_ASSETS.components.benefitRepeatVisits}
+              style={styles.benefitImg}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
-  const getStatusStyle = (status) => {
+  const getStatusLabel = (status) => {
     switch (status) {
       case 'confirmed':
-        return { bg: COLORS.successSoft, color: COLORS.success, label: t('StatusConfirmed') };
+        return t('StatusConfirmed');
       case 'completed':
-        return { bg: COLORS.accentSoft, color: COLORS.accent, label: t('StatusCompleted') };
+        return t('StatusCompleted');
       case 'rejected':
-        return { bg: COLORS.dangerSoft, color: COLORS.danger, label: t('StatusRejected') };
+        return t('StatusRejected');
       case 'cancelled':
-        return { bg: COLORS.dangerSoft, color: COLORS.danger, label: t('StatusCancelled') };
+        return t('StatusCancelled');
       default:
-        return { bg: COLORS.telegramSoft, color: COLORS.telegram, label: t('StatusPending') };
+        return t('StatusPending');
     }
   };
 
@@ -206,7 +246,7 @@ export default function ProfileScreen() {
                 userInfo.avatar ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(
                   userInfo.name || 'U'
-                )}&background=F59E0B&color=000`,
+                )}&background=D4AF5A&color=0A0A0C`,
             }}
             style={styles.avatar}
           />
@@ -216,8 +256,12 @@ export default function ProfileScreen() {
               {userInfo.phone || (userInfo.username ? `@${userInfo.username}` : `ID: ${userInfo.telegramId}`)}
             </Text>
           </View>
-          <Pressable onPress={refreshProfile} style={styles.iconActionBtn}>
-            <Ionicons name="refresh" size={18} color={COLORS.text} />
+          <Pressable onPress={handleManualRefresh} style={styles.iconActionBtn}>
+            <Image
+              source={MOTION_ASSETS.icons.refresh}
+              style={{ width: 18, height: 18, tintColor: COLORS.accent }}
+              resizeMode="contain"
+            />
           </Pressable>
           <Pressable onPress={logout} style={styles.iconActionBtn}>
             <Ionicons name="log-out-outline" size={18} color={COLORS.danger} />
@@ -244,8 +288,8 @@ export default function ProfileScreen() {
               >
                 <Ionicons
                   name={tab.icon}
-                  size={16}
-                  color={active ? '#000' : COLORS.textMuted}
+                  size={15}
+                  color={active ? COLORS.bg : COLORS.textMuted}
                 />
                 <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                   {tab.label}
@@ -255,14 +299,15 @@ export default function ProfileScreen() {
           })}
         </View>
 
-        {/* TAB 1: Live Bookings History */}
+        {/* TAB 1: Live Bookings History with StatusBadge & Skeleton */}
         {activeTab === 'bookings' && (
           <View style={styles.sectionBox}>
-            {bookings.length === 0 ? (
+            {isRefreshingProfile ? (
+              <ProfileBookingsSkeleton />
+            ) : bookings.length === 0 ? (
               <Text style={styles.emptyText}>{t('NoBookingsYet')}</Text>
             ) : (
               bookings.map((booking, idx) => {
-                const statusInfo = getStatusStyle(booking.status);
                 const canCancel = ['pending', 'confirmed'].includes(booking.status);
                 const canRate = booking.status === 'completed' && !booking.rating;
 
@@ -279,13 +324,10 @@ export default function ProfileScreen() {
                           🗓 {new Date(booking.requestedTime).toLocaleString()}
                         </Text>
                       </View>
-                      <View
-                        style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}
-                      >
-                        <Text style={[styles.statusBadgeText, { color: statusInfo.color }]}>
-                          {statusInfo.label}
-                        </Text>
-                      </View>
+                      <StatusBadge
+                        status={booking.status}
+                        label={getStatusLabel(booking.status)}
+                      />
                     </View>
 
                     {(booking.serviceName || booking.staffName) && (
@@ -328,7 +370,11 @@ export default function ProfileScreen() {
                           }}
                           style={styles.rateBookingBtn}
                         >
-                          <Ionicons name="star" size={14} color="#000" />
+                          <Image
+                            source={MOTION_ASSETS.icons.star}
+                            style={{ width: 14, height: 14, tintColor: COLORS.bg }}
+                            resizeMode="contain"
+                          />
                           <Text style={styles.rateBookingText}>{t('RateVisit')}</Text>
                         </Pressable>
                       )}
@@ -371,7 +417,7 @@ export default function ProfileScreen() {
               onChangeText={setEditName}
               style={styles.textInput}
               placeholder={t('EnterName')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.textFaint}
             />
 
             <Text style={styles.inputLabel}>{t('PhoneNumber')}</Text>
@@ -381,7 +427,7 @@ export default function ProfileScreen() {
               keyboardType="phone-pad"
               style={styles.textInput}
               placeholder="+998 90 123 45 67"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.textFaint}
             />
 
             <Pressable
@@ -463,8 +509,8 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 36,
   },
-  authCenterBox: {
-    flex: 1,
+  authScrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -473,30 +519,32 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     backgroundColor: COLORS.surface,
-    borderRadius: 24,
+    borderRadius: 22,
     padding: 28,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
-  tgIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.telegramSoft,
+  markWrap: {
+    width: 76,
+    height: 76,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  authTitle: {
-    color: COLORS.text,
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 8,
+  authWordmark: {
+    width: 175,
+    height: 30,
+    marginBottom: 10,
   },
   authSubtitle: {
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 13.5,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -513,8 +561,21 @@ const styles = StyleSheet.create({
   },
   telegramLoginText: {
     color: '#FFF',
-    fontSize: 16,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 15,
     fontWeight: '700',
+  },
+  benefitsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 20,
+    maxWidth: 420,
+  },
+  benefitImg: {
+    width: 120,
+    height: 92,
   },
   waitingBox: {
     alignItems: 'center',
@@ -523,6 +584,7 @@ const styles = StyleSheet.create({
   },
   waitingText: {
     color: COLORS.text,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
@@ -532,9 +594,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   reopenBtnText: {
-    color: COLORS.telegram,
+    color: COLORS.accent,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -547,28 +612,30 @@ const styles = StyleSheet.create({
   },
   profileHeaderCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.surface2,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: COLORS.surface3,
   },
   userName: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   userMeta: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     marginTop: 2,
   },
@@ -577,6 +644,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 12,
     backgroundColor: COLORS.surface2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -586,8 +655,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 4,
     marginBottom: 18,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   segmentBtn: {
     flex: 1,
@@ -603,11 +672,13 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     color: COLORS.textMuted,
-    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   segmentTextActive: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
   },
   sectionBox: {
@@ -615,6 +686,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     textAlign: 'center',
     paddingVertical: 42,
     fontSize: 14,
@@ -623,8 +695,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   bookingTopRow: {
     flexDirection: 'row',
@@ -634,22 +706,15 @@ const styles = StyleSheet.create({
   },
   bookingShopName: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   bookingTimeText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
   },
   bookingMetaRow: {
     marginTop: 10,
@@ -657,6 +722,7 @@ const styles = StyleSheet.create({
   },
   bookingSubText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
   },
   ratedStars: {
@@ -677,6 +743,7 @@ const styles = StyleSheet.create({
   },
   cancelBookingText: {
     color: COLORS.danger,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 12,
   },
@@ -690,7 +757,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rateBookingText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 12,
   },
@@ -698,11 +766,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   inputLabel: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 6,
@@ -714,8 +783,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: COLORS.text,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 15,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   saveProfileBtn: {
@@ -726,7 +796,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveProfileText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -751,7 +822,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(10,10,12,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -760,18 +831,22 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 380,
     backgroundColor: COLORS.surface,
-    borderRadius: 22,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     padding: 24,
     alignItems: 'center',
   },
   modalTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 4,
   },
   modalSubtitle: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 14,
     marginTop: 10,
     marginBottom: 8,
@@ -790,7 +865,8 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   submitReviewText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 15,
   },

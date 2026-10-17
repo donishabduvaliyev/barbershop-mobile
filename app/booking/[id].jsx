@@ -7,7 +7,6 @@ import {
   Image,
   TextInput,
   StyleSheet,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,11 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
+import { BookingSuccessModal } from '../../src/components/BrandAssets';
+import { BookingSheetSkeleton } from '../../src/components/Skeletons';
 
 const pad = (num) => String(num).padStart(2, '0');
+const normParam = (v) => (Array.isArray(v) ? v[0] : v);
 
 const toDateKey = (date) => {
   const y = date.getFullYear();
@@ -29,9 +31,6 @@ const toDateKey = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-// Exact staff-aware slot availability logic ported from the Web Mini App
-// (barbershop-main/src/pages/Booking.jsx) so Web and Mobile never disagree
-// on which slots are open.
 const isHourTaken = (bookedSlots, date, hour, staffId, staffCount, capacity, isStaffOff) => {
   if (staffId && isStaffOff) return true;
 
@@ -51,8 +50,6 @@ const isHourTaken = (bookedSlots, date, hour, staffId, staffCount, capacity, isS
   ).size;
   return distinctStaffBooked >= staffCount;
 };
-
-const normParam = (v) => (Array.isArray(v) ? v[0] : v) || null;
 
 export default function BookingScreen() {
   const rawParams = useLocalSearchParams();
@@ -79,6 +76,7 @@ export default function BookingScreen() {
   const [availability, setAvailability] = useState({ workingHours: [], bookedSlots: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [name, setName] = useState(userInfo?.name || '');
   const [phone, setPhone] = useState(userInfo?.phone || '');
@@ -95,9 +93,9 @@ export default function BookingScreen() {
   );
 
   const [selectedDate, setSelectedDate] = useState(dates[0]);
-  const [selectedHour, setSelectedHour] = useState(presetHour);
-  const [selectedStaffId, setSelectedStaffId] = useState(presetStaffId);
-  const [selectedServiceId, setSelectedServiceId] = useState(presetServiceId);
+  const [selectedHour, setSelectedHour] = useState(presetHour || null);
+  const [selectedStaffId, setSelectedStaffId] = useState(presetStaffId || null);
+  const [selectedServiceId, setSelectedServiceId] = useState(presetServiceId || null);
 
   useEffect(() => {
     if (userInfo?.name && !name) setName(userInfo.name);
@@ -116,7 +114,7 @@ export default function BookingScreen() {
         setShop(shopData);
         setAvailability(availData);
         if (!selectedServiceId && shopData.services?.length) {
-          setSelectedServiceId(presetServiceId || String(shopData.services[0]._id));
+          setSelectedServiceId(presetServiceId || shopData.services[0]._id);
         }
       }
     } catch (err) {
@@ -131,7 +129,6 @@ export default function BookingScreen() {
   }, [fetchAvailability]);
 
   // Subscribe to real-time Socket.io availability updates for this shop
-  // so slots booked or cancelled on Web or Mobile update live on screen!
   useEffect(() => {
     if (!id) return;
     return subscribeShopAvailability(id, () => {
@@ -263,7 +260,7 @@ export default function BookingScreen() {
       bookingDate.setHours(parseInt(selectedHour, 10), 0, 0, 0);
 
       const shopName =
-        shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en;
+        shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
 
       const res = await fetch(`${backEndUrl}/api/mobile/shops/booking-requests`, {
         method: 'POST',
@@ -289,9 +286,11 @@ export default function BookingScreen() {
         throw new Error(data.message || 'Booking request failed');
       }
 
-      showToast(t('BookingSent'));
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
       await refreshProfile();
-      router.replace('/(tabs)/profile');
+      setShowSuccessModal(true);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -301,18 +300,20 @@ export default function BookingScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loaderBox}>
-        <ActivityIndicator size="large" color={COLORS.accent} />
+      <SafeAreaView style={styles.safeArea}>
+        <BookingSheetSkeleton horizontalPadding={horizontalPadding} />
       </SafeAreaView>
     );
   }
 
   if (!shop) {
     return (
-      <SafeAreaView style={styles.loaderBox}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="close" size={22} color={COLORS.text} />
-        </Pressable>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.topHeader, { paddingHorizontal: horizontalPadding }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="close" size={22} color={COLORS.text} />
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -323,6 +324,17 @@ export default function BookingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Animated Booking Success Modal modeled after components/card-success.svg */}
+      <BookingSuccessModal
+        visible={showSuccessModal}
+        title="So'rov yuborildi!"
+        subtitle={t('BookingSent')}
+        onClose={() => {
+          setShowSuccessModal(false);
+          router.replace('/(tabs)/profile');
+        }}
+      />
+
       {/* Top Bar */}
       <View style={[styles.topHeader, { paddingHorizontal: horizontalPadding }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -390,7 +402,7 @@ export default function BookingScreen() {
             </Animated.View>
           )}
 
-          {/* 2. Choose Specialist / Barber */}
+          {/* 2. Choose Specialist / Barber styled after panel-booking-sheet.svg staff chips */}
           {availableStaffForService.length > 0 && (
             <Animated.View
               entering={FadeInDown.delay(60).duration(300)}
@@ -503,7 +515,7 @@ export default function BookingScreen() {
             </ScrollView>
           </Animated.View>
 
-          {/* 4. Choose Live Time Slot */}
+          {/* 4. Choose Live Time Slot styled after components/time-picker.svg */}
           <Animated.View
             entering={FadeInDown.delay(180).duration(300)}
             style={styles.cardSection}
@@ -548,7 +560,7 @@ export default function BookingScreen() {
               value={name}
               onChangeText={setName}
               placeholder={t('EnterName')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.textFaint}
               style={styles.input}
             />
             <TextInput
@@ -556,7 +568,7 @@ export default function BookingScreen() {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholder="+998 90 123 45 67"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.textFaint}
               style={[styles.input, { marginTop: 10 }]}
             />
 
@@ -584,17 +596,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-  loaderBox: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: COLORS.borderSoft,
   },
   backBtn: {
@@ -602,16 +608,20 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
     backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.displaySemiBold,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   headerSub: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
   },
   scrollContent: {
@@ -628,16 +638,17 @@ const styles = StyleSheet.create({
   },
   cardSection: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
   },
   stepTitle: {
     color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 16.5,
+    fontWeight: '600',
     marginBottom: 12,
   },
   chipsWrap: {
@@ -647,7 +658,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface2,
     padding: 13,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   serviceChipActive: {
@@ -656,19 +667,22 @@ const styles = StyleSheet.create({
   },
   serviceChipTitle: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14.5,
   },
   serviceChipTitleActive: {
-    color: '#000',
+    color: COLORS.bg,
   },
   serviceChipSub: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 12,
     marginTop: 3,
   },
   serviceChipSubActive: {
-    color: '#1E293B',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodySemiBold,
     fontWeight: '600',
   },
   barberRow: {
@@ -677,10 +691,10 @@ const styles = StyleSheet.create({
   barberChip: {
     width: 96,
     backgroundColor: COLORS.surface2,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 10,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   barberChipActive: {
@@ -703,12 +717,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   barberName: {
-    color: COLORS.text,
-    fontSize: 12,
-    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12.5,
+    fontWeight: '500',
   },
   barberNameActive: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
   },
   dateRow: {
@@ -721,7 +737,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 14,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   datePillActive: {
@@ -733,17 +749,19 @@ const styles = StyleSheet.create({
   },
   dateDayName: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
     fontWeight: '600',
   },
   dateNumber: {
     color: COLORS.text,
+    fontFamily: FONTS.bodyBold,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 2,
   },
   dateTextActive: {
-    color: '#000',
+    color: COLORS.bg,
   },
   slotsGrid: {
     flexDirection: 'row',
@@ -751,27 +769,33 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   slotPill: {
+    minWidth: 86,
+    height: 46,
     backgroundColor: COLORS.surface2,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   slotPillActive: {
     backgroundColor: COLORS.accent,
     borderColor: COLORS.accent,
   },
   slotText: {
-    color: COLORS.text,
-    fontWeight: '700',
-    fontSize: 14,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
+    fontWeight: '600',
+    fontSize: 13,
   },
   slotTextActive: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
+    fontWeight: '700',
   },
   noSlotsText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     paddingVertical: 12,
     textAlign: 'center',
@@ -782,20 +806,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: COLORS.text,
-    fontSize: 15,
-    borderWidth: 1,
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 14.5,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   confirmBtn: {
     backgroundColor: COLORS.accent,
-    paddingVertical: 15,
-    borderRadius: 14,
+    height: 50,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
   },
   confirmBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '800',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 14.5,
+    fontWeight: '700',
   },
 });

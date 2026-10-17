@@ -10,8 +10,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../theme/colors';
+import { COLORS, FONTS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
+import { MOTION_ASSETS } from './BrandAssets';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -67,7 +68,7 @@ export const ShopCard = ({ shop, index = 0, style }) => {
           />
           {shop.isPromoted && (
             <View style={styles.promotedBadge}>
-              <Ionicons name="sparkles" size={11} color="#000" />
+              <Ionicons name="sparkles" size={11} color={COLORS.bg} />
               <Text style={styles.promotedText}>{t('Promoted')}</Text>
             </View>
           )}
@@ -86,11 +87,15 @@ export const ShopCard = ({ shop, index = 0, style }) => {
             />
           </Pressable>
           <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={13} color={COLORS.accent} />
+            <Image
+              source={MOTION_ASSETS.icons.star}
+              style={{ width: 13, height: 13, tintColor: COLORS.accent }}
+              resizeMode="contain"
+            />
             <Text style={styles.ratingText}>
               {Number(shop.rating || 5.0).toFixed(1)}
             </Text>
-            <Text style={styles.reviewsText}>({shop.reviewsCount || 0})</Text>
+            <Text style={styles.reviewsText}>· {shop.reviewsCount || 0} {t('Reviews')}</Text>
           </View>
         </View>
 
@@ -106,7 +111,11 @@ export const ShopCard = ({ shop, index = 0, style }) => {
 
           {!!shopAddress && (
             <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
+              <Image
+                source={MOTION_ASSETS.icons.mapPin}
+                style={{ width: 13, height: 13, tintColor: COLORS.textMuted }}
+                resizeMode="contain"
+              />
               <Text style={styles.address} numberOfLines={1}>
                 {shopAddress}
               </Text>
@@ -126,7 +135,7 @@ export const ShopCard = ({ shop, index = 0, style }) => {
               style={styles.bookBtn}
             >
               <Text style={styles.bookBtnText}>{t('BookNow')}</Text>
-              <Ionicons name="arrow-forward" size={14} color="#000" />
+              <Ionicons name="arrow-forward" size={14} color={COLORS.bg} />
             </Pressable>
           </View>
         </View>
@@ -135,22 +144,23 @@ export const ShopCard = ({ shop, index = 0, style }) => {
   );
 };
 
+// Styled after components/card-shop.svg (#131317 fill, #212127 1.5px stroke, #D4AF5A rating)
 const styles = StyleSheet.create({
   wrapper: {
     marginBottom: 16,
   },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
+    borderWidth: 1.5,
+    borderColor: COLORS.surface3,
   },
   imageContainer: {
     height: 175,
     width: '100%',
     position: 'relative',
-    backgroundColor: COLORS.surface2,
+    backgroundColor: '#2A2416',
   },
   image: {
     width: '100%',
@@ -169,7 +179,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   promotedText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -180,7 +191,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(11, 15, 23, 0.65)',
+    backgroundColor: 'rgba(10, 10, 12, 0.68)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -188,7 +199,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     left: 12,
-    backgroundColor: 'rgba(11, 15, 23, 0.85)',
+    backgroundColor: 'rgba(10, 10, 12, 0.86)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -197,12 +208,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    color: COLORS.text,
+    color: COLORS.accent,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 12,
   },
   reviewsText: {
-    color: COLORS.textMuted,
+    color: COLORS.accent,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 11,
   },
   content: {
@@ -216,24 +229,27 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.text,
-    fontSize: 17,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16.5,
     fontWeight: '700',
     flex: 1,
     marginRight: 8,
   },
   priceTier: {
     color: COLORS.accent,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     marginBottom: 12,
   },
   address: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodyRegular,
     fontSize: 13,
     flex: 1,
   },
@@ -247,9 +263,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   categoryText: {
     color: COLORS.textMuted,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -263,7 +282,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bookBtnText: {
-    color: '#000',
+    color: COLORS.bg,
+    fontFamily: FONTS.bodyBold,
     fontWeight: '700',
     fontSize: 13,
   },
