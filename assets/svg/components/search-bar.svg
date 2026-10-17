@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 346 44">
+  <rect x="0.75" y="0.75" width="344.5" height="42.5" rx="12" fill="#131317" stroke="#27272E" stroke-width="1.5"/>
+  <g transform="translate(16,14) scale(0.6666666666666666)" fill="none" stroke="#64646D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></g>
+  <text x="42" y="27" font-family="Inter, system-ui, sans-serif" font-size="12.5" fill="#64646D">Qidiruv: sartaroshlar, salonlar&#8230;</text>
+</svg>

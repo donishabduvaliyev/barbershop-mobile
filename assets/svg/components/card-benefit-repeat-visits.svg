@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 72">
+  <rect x="0.75" y="0.75" width="298.5" height="70.5" rx="16" fill="#131317" stroke="#1D1D23" stroke-width="1.5"/>
+  <circle cx="38" cy="36.0" r="19" fill="#1A1A1F"/>
+  <g transform="translate(28,26.0) scale(0.8333333333333334)" fill="none" stroke="#D4AF5A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.4-5.5"/><path d="M19.8 3.6v5h-5"/></g>
+  <text x="68" y="42.0" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="16" fill="#F4F4F5">Ko&#39;proq qayta tashrif</text>
+</svg>

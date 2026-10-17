@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 430">
+  <text x="0" y="20" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="19" fill="#F4F4F5">Xush kelibsiz</text>
+  <text x="0" y="40" font-family="Inter, system-ui, sans-serif" font-size="11.5" fill="#64646D">Bekzod Barber shu oy qanday ishlayapti</text>
+
+  <g transform="translate(0,54)">
+    <rect x="0.75" y="0.75" width="173.5" height="94.5" rx="12" fill="#131317" stroke="#1D1D23" stroke-width="1.5"/>
+    <text x="12" y="20" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="8" letter-spacing="0.4" fill="#9C9CA6">YOZILISHLAR (30 KUN)</text>
+    <text x="12" y="82" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="18" fill="#F4F4F5">38</text>
+  </g>
+  <g transform="translate(185,54)">
+    <rect x="0.75" y="0.75" width="173.5" height="94.5" rx="12" fill="#131317" stroke="#1D1D23" stroke-width="1.5"/>
+    <text x="12" y="20" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="8" letter-spacing="0.4" fill="#9C9CA6">KUTILMOQDA</text>
+    <text x="12" y="82" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="18" fill="#F4F4F5">2</text>
+  </g>
+
+  <rect x="0.75" y="164.75" width="358.5" height="264.5" rx="16" fill="#131317" stroke="#1D1D23" stroke-width="1.5"/>
+  <text x="18" y="192" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="13" fill="#F4F4F5">So&#39;nggi buyurtmalar</text>
+  <text x="342" y="192" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="11.5" fill="#D4AF5A">Barchasi &#8594;</text>
+  <line x1="18" y1="206" x2="342" y2="206" stroke="#1D1D23" stroke-width="1"/>
+
+  <g transform="translate(18,220)">
+    <circle cx="19" cy="19" r="15" fill="#212127"/>
+    <text x="19" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="11" fill="#9C9CA6">A</text>
+    <text x="46" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="12.5" fill="#F4F4F5">Aziz</text>
+    <text x="46" y="31" font-family="Inter, system-ui, sans-serif" font-size="10.5" fill="#64646D">Soch olish &#183; Bobur</text>
+    <g transform="translate(230,6)">
+    <rect width="112" height="24" rx="12" fill="#5B9DF9" fill-opacity="0.16"/>
+    <circle cx="14" cy="12" r="2.6" fill="#5B9DF9"/>
+    <text x="23" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="10" fill="#5B9DF9">TASDIQLANGAN</text>
+  </g>
+  </g>
+  <line x1="18" y1="278" x2="342" y2="278" stroke="#1D1D23" stroke-width="0.75"/>
+  <g transform="translate(18,292)">
+    <circle cx="19" cy="19" r="15" fill="#212127"/>
+    <text x="19" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="11" fill="#9C9CA6">M</text>
+    <text x="46" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="12.5" fill="#F4F4F5">Malika</text>
+    <text x="46" y="31" font-family="Inter, system-ui, sans-serif" font-size="10.5" fill="#64646D">Manikyur &#183; Zarina</text>
+    <g transform="translate(240,6)">
+    <rect width="100" height="24" rx="12" fill="#F0B84C" fill-opacity="0.16"/>
+    <circle cx="14" cy="12" r="2.6" fill="#F0B84C"/>
+    <text x="23" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="10" fill="#F0B84C">KUTILMOQDA</text>
+  </g>
+  </g>
+  <line x1="18" y1="350" x2="342" y2="350" stroke="#1D1D23" stroke-width="0.75"/>
+  <g transform="translate(18,364)">
+    <circle cx="19" cy="19" r="15" fill="#212127"/>
+    <text x="19" y="24" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="11" fill="#9C9CA6">J</text>
+    <text x="46" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="12.5" fill="#F4F4F5">Jahongir</text>
+    <text x="46" y="31" font-family="Inter, system-ui, sans-serif" font-size="10.5" fill="#64646D">Soqol olish &#183; Bobur</text>
+    <g transform="translate(246,6)">
+    <rect width="94" height="24" rx="12" fill="#3DDC97" fill-opacity="0.16"/>
+    <circle cx="14" cy="12" r="2.6" fill="#3DDC97"/>
+    <text x="23" y="16" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="10" fill="#3DDC97">YAKUNLANDI</text>
+  </g>
+  </g>
+</svg>

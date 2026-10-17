@@ -1,23 +1,49 @@
-// Unified dark-luxury barbershop color palette matching the web app's theme
-// with rich contrast for Android AMOLED and tablet displays.
+// Official SmartChair Brand Palette & Typography Tokens
+// Pulled directly from SmartChair_Motion_Assets/colors/palette.txt
 export const COLORS = {
-  bg: '#0B0F17',
-  surface: '#141B26',
-  surface2: '#1E293B',
-  surface3: '#293548',
-  accent: '#F59E0B', // Warm amber/gold barbershop accent
-  accentHover: '#D97706',
-  accentSoft: 'rgba(245, 158, 11, 0.16)',
+  // Neutrals (background / surface, darkest to lightest)
+  bg: '#0A0A0C',
+  surface: '#131317',
+  surface2: '#1A1A1F',
+  surface3: '#212127',
+  border: '#27272E',
+  borderSoft: '#1D1D23',
+  markStroke: '#46414C',
+
+  // Text
+  text: '#F4F4F5',
+  textMuted: '#9C9CA6',
+  textFaint: '#64646D',
+
+  // Brand Gold Accent
+  accent: '#D4AF5A',
+  accentHover: '#E2C176',
+  accentSoft: 'rgba(212, 175, 90, 0.16)',
+
+  // Semantic Status Colors (16% opacity for badge backgrounds, 100% for dot + text)
+  success: '#3DDC97', // Completed / Done (green)
+  successSoft: 'rgba(61, 220, 151, 0.16)',
+
+  danger: '#F2685C', // Rejected / Cancelled (red)
+  dangerSoft: 'rgba(242, 104, 92, 0.16)',
+
+  warning: '#F0B84C', // Pending (amber)
+  warningSoft: 'rgba(240, 184, 76, 0.16)',
+
+  info: '#5B9DF9', // Confirmed (blue)
+  infoSoft: 'rgba(91, 157, 249, 0.16)',
+
   telegram: '#2AABEE',
   telegramSoft: 'rgba(42, 171, 238, 0.16)',
-  text: '#F8FAFC',
-  textMuted: '#94A3B8',
-  textFaint: '#64748B',
-  border: '#263245',
-  borderSoft: '#1B2434',
-  success: '#10B981',
-  successSoft: 'rgba(16, 185, 129, 0.16)',
-  danger: '#EF4444',
-  dangerSoft: 'rgba(239, 68, 68, 0.16)',
-  warning: '#F59E0B',
+};
+
+export const FONTS = {
+  displayMedium: 'Fraunces-500',
+  displaySemiBold: 'Fraunces-600',
+  displayBold: 'Fraunces-700',
+  bodyRegular: 'Inter-400',
+  bodyMedium: 'Inter-500',
+  bodySemiBold: 'Inter-600',
+  bodyBold: 'Inter-700',
+  bodyExtraBold: 'Inter-800',
 };

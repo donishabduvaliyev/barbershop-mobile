@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 190">
+  <rect x="0.75" y="0.75" width="308.5" height="188.5" rx="18" fill="#131317" stroke="#27272E" stroke-width="1.5"/>
+  <circle cx="155" cy="58" r="23" fill="#3DDC97" fill-opacity="0.16"/>
+  <g transform="translate(143,46) scale(1.0)" fill="none" stroke="#3DDC97" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></g>
+  <text x="155" y="112" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="17" fill="#F4F4F5">So&#39;rov yuborildi!</text>
+  <text x="155" y="136" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#9C9CA6">Tez orada Telegramda tasdiqlash</text>
+  <text x="155" y="153" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#9C9CA6">xabarini olasiz.</text>
+</svg>

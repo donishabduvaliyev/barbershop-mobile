@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 306 50">
+  <rect x="0.75" y="0.75" width="90.5" height="48.5" rx="10" fill="#1A1A1F" stroke="#27272E" stroke-width="1.5"/>
+  <text x="46" y="30" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="500" font-size="13" fill="#9C9CA6">14:00</text>
+  <rect x="107.75" y="0.75" width="90.5" height="48.5" rx="10" fill="#D4AF5A"/>
+  <text x="153" y="30" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="13" fill="#0A0A0C">15:00</text>
+  <rect x="214.75" y="0.75" width="90.5" height="48.5" rx="10" fill="#1A1A1F" stroke="#27272E" stroke-width="1.5"/>
+  <text x="260" y="30" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="500" font-size="13" fill="#9C9CA6">16:00</text>
+</svg>
