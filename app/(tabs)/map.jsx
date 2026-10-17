@@ -26,6 +26,9 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.08,
 };
 
+const FALLBACK_SHOP_IMAGE =
+  'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80';
+
 export default function MapScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -44,7 +47,10 @@ export default function MapScreen() {
         Array.isArray(coords) &&
         coords.length === 2 &&
         typeof coords[0] === 'number' &&
-        typeof coords[1] === 'number';
+        typeof coords[1] === 'number' &&
+        Number.isFinite(coords[0]) &&
+        Number.isFinite(coords[1]) &&
+        !(coords[0] === 0 && coords[1] === 0);
       if (!hasValidCoords) return false;
       if (selectedCategory === 'All') return true;
       return String(shop.category || '').toLowerCase() === selectedCategory.toLowerCase();
@@ -99,7 +105,11 @@ export default function MapScreen() {
             {shopsWithCoords.map((shop) => {
               const isSelected = selectedShop?._id === shop._id;
               const name =
-                shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en;
+                shop.name?.[lang] ||
+                shop.name?.uz ||
+                shop.name?.ru ||
+                shop.name?.en ||
+                'Barbershop';
               const address =
                 shop.address?.[lang] || shop.address?.uz || shop.address?.en || '';
               return (
@@ -109,7 +119,7 @@ export default function MapScreen() {
                   style={[styles.sidebarItem, isSelected && styles.sidebarItemActive]}
                 >
                   <Image
-                    source={{ uri: shop.image }}
+                    source={{ uri: shop.image || FALLBACK_SHOP_IMAGE }}
                     style={styles.sidebarThumb}
                   />
                   <View style={{ flex: 1 }}>
@@ -140,7 +150,11 @@ export default function MapScreen() {
           {shopsWithCoords.map((shop) => {
             const [lng, lat] = shop.location.coordinates;
             const name =
-              shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en;
+              shop.name?.[lang] ||
+              shop.name?.uz ||
+              shop.name?.ru ||
+              shop.name?.en ||
+              'Barbershop';
             return (
               <Marker
                 key={shop._id}
@@ -193,14 +207,16 @@ export default function MapScreen() {
         {selectedShop && (
           <Animated.View entering={FadeInDown.springify()} style={styles.previewCard}>
             <Image
-              source={{ uri: selectedShop.image }}
+              source={{ uri: selectedShop.image || FALLBACK_SHOP_IMAGE }}
               style={styles.previewImage}
             />
             <View style={styles.previewInfo}>
               <Text style={styles.previewTitle} numberOfLines={1}>
                 {selectedShop.name?.[lang] ||
                   selectedShop.name?.uz ||
-                  selectedShop.name?.en}
+                  selectedShop.name?.ru ||
+                  selectedShop.name?.en ||
+                  'Barbershop'}
               </Text>
               <Text style={styles.previewAddress} numberOfLines={1}>
                 {selectedShop.address?.[lang] || selectedShop.address?.uz || ''}

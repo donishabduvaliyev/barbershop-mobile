@@ -183,8 +183,9 @@ export default function ProfileScreen() {
         return { bg: COLORS.successSoft, color: COLORS.success, label: t('StatusConfirmed') };
       case 'completed':
         return { bg: COLORS.accentSoft, color: COLORS.accent, label: t('StatusCompleted') };
-      case 'cancelled':
       case 'rejected':
+        return { bg: COLORS.dangerSoft, color: COLORS.danger, label: t('StatusRejected') };
+      case 'cancelled':
         return { bg: COLORS.dangerSoft, color: COLORS.danger, label: t('StatusCancelled') };
       default:
         return { bg: COLORS.telegramSoft, color: COLORS.telegram, label: t('StatusPending') };

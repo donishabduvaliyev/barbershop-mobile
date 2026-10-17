@@ -18,7 +18,8 @@ import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 
 export default function ShopDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id: rawId } = useLocalSearchParams();
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
@@ -46,7 +47,7 @@ export default function ShopDetailScreen() {
     })();
   }, [id, backEndUrl]);
 
-  if (isLoading || !shop) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={COLORS.accent} />
@@ -54,9 +55,19 @@ export default function ShopDetailScreen() {
     );
   }
 
+  if (!shop) {
+    return (
+      <SafeAreaView style={styles.loaderContainer}>
+        <Pressable onPress={() => router.back()} style={styles.circleBtn}>
+          <Ionicons name="arrow-back" size={22} color="#FFF" />
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
   const isFavorited = favoriteIds.has(String(shop._id));
   const shopName =
-    shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en;
+    shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
   const shopAddress =
     shop.address?.[lang] || shop.address?.uz || shop.address?.ru || shop.address?.en || '';
 

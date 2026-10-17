@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
@@ -300,8 +300,17 @@ export const AppProvider = ({ children }) => {
       authSocketRef.current = authSocket;
 
       // Open Telegram app directly via tg:// scheme, falling back to https://t.me
-      const canOpenTg = await Linking.canOpenURL(session.tgDeepLink).catch(() => false);
-      await Linking.openURL(canOpenTg ? session.tgDeepLink : session.webDeepLink);
+      const canOpenTg = session.tgDeepLink
+        ? await Linking.canOpenURL(session.tgDeepLink).catch(() => false)
+        : false;
+      const targetUrl = canOpenTg ? session.tgDeepLink : session.webDeepLink;
+      if (targetUrl) {
+        await Linking.openURL(targetUrl).catch(() => {
+          if (session.webDeepLink && targetUrl !== session.webDeepLink) {
+            Linking.openURL(session.webDeepLink).catch(() => {});
+          }
+        });
+      }
     } catch (err) {
       setIsAuthenticating(false);
       showToast(err.message || 'Failed to start Telegram login', 'error');
@@ -360,7 +369,10 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Favorites lookup Set & optimistic toggle
-  const favoriteIds = new Set((userInfo?.favorites || []).map((id) => String(id?._id || id)));
+  const favoriteIds = useMemo(
+    () => new Set((userInfo?.favorites || []).map((id) => String(id?._id || id))),
+    [userInfo?.favorites]
+  );
 
   const toggleFavorite = useCallback(async (shopId) => {
     if (!mobileToken || !userInfo) {

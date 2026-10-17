@@ -41,17 +41,26 @@ const isHourTaken = (bookedSlots, date, hour, staffId, staffCount, capacity, isS
   const atHour = bookedSlots.filter((b) => new Date(b.requestedTime).getTime() === targetTime);
 
   if (staffId) {
-    return atHour.some((b) => b.staffId === staffId);
+    return atHour.some((b) => String(b.staffId) === String(staffId));
   }
   if (!staffCount) {
     return atHour.length >= (capacity || 1);
   }
-  const distinctStaffBooked = new Set(atHour.filter((b) => b.staffId).map((b) => b.staffId)).size;
+  const distinctStaffBooked = new Set(
+    atHour.filter((b) => b.staffId).map((b) => String(b.staffId))
+  ).size;
   return distinctStaffBooked >= staffCount;
 };
 
+const normParam = (v) => (Array.isArray(v) ? v[0] : v) || null;
+
 export default function BookingScreen() {
-  const { id, presetHour, presetServiceId, presetStaffId } = useLocalSearchParams();
+  const rawParams = useLocalSearchParams();
+  const id = normParam(rawParams.id);
+  const presetHour = normParam(rawParams.presetHour);
+  const presetServiceId = normParam(rawParams.presetServiceId);
+  const presetStaffId = normParam(rawParams.presetStaffId);
+
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
@@ -86,9 +95,9 @@ export default function BookingScreen() {
   );
 
   const [selectedDate, setSelectedDate] = useState(dates[0]);
-  const [selectedHour, setSelectedHour] = useState(presetHour || null);
-  const [selectedStaffId, setSelectedStaffId] = useState(presetStaffId || null);
-  const [selectedServiceId, setSelectedServiceId] = useState(presetServiceId || null);
+  const [selectedHour, setSelectedHour] = useState(presetHour);
+  const [selectedStaffId, setSelectedStaffId] = useState(presetStaffId);
+  const [selectedServiceId, setSelectedServiceId] = useState(presetServiceId);
 
   useEffect(() => {
     if (userInfo?.name && !name) setName(userInfo.name);
@@ -107,7 +116,7 @@ export default function BookingScreen() {
         setShop(shopData);
         setAvailability(availData);
         if (!selectedServiceId && shopData.services?.length) {
-          setSelectedServiceId(presetServiceId || shopData.services[0]._id);
+          setSelectedServiceId(presetServiceId || String(shopData.services[0]._id));
         }
       }
     } catch (err) {
@@ -138,18 +147,21 @@ export default function BookingScreen() {
     if (!shop?.staff) return [];
     if (!selectedServiceId) return shop.staff;
     return shop.staff.filter(
-      (m) => !m.serviceIds?.length || m.serviceIds.includes(selectedServiceId)
+      (m) =>
+        !m.serviceIds?.length ||
+        m.serviceIds.some((sid) => String(sid) === String(selectedServiceId))
     );
   }, [shop, selectedServiceId]);
 
   useEffect(() => {
+    if (!shop) return;
     if (
       selectedStaffId &&
       !availableStaffForService.some((m) => String(m._id) === String(selectedStaffId))
     ) {
       setSelectedStaffId(null);
     }
-  }, [availableStaffForService, selectedStaffId]);
+  }, [shop, availableStaffForService, selectedStaffId]);
 
   const effectiveWorkingHours = useMemo(() => {
     if (selectedStaffId) {
@@ -186,7 +198,7 @@ export default function BookingScreen() {
             !m.daysOff?.includes(dateKey) &&
             (!m.serviceIds?.length ||
               !selectedServiceId ||
-              m.serviceIds.includes(selectedServiceId))
+              m.serviceIds.some((sid) => String(sid) === String(selectedServiceId)))
         ).length
       : staffCount;
 
@@ -225,10 +237,10 @@ export default function BookingScreen() {
   ]);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!shop || !selectedDate) return;
     if (selectedHour && availableHours.includes(selectedHour)) return;
     setSelectedHour(availableHours.length > 0 ? availableHours[0] : null);
-  }, [selectedDate, availableHours]);
+  }, [shop, selectedDate, availableHours]);
 
   const handleSubmitBooking = async () => {
     if (!mobileToken) {
@@ -287,7 +299,7 @@ export default function BookingScreen() {
     }
   };
 
-  if (isLoading || !shop) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loaderBox}>
         <ActivityIndicator size="large" color={COLORS.accent} />
@@ -295,9 +307,19 @@ export default function BookingScreen() {
     );
   }
 
+  if (!shop) {
+    return (
+      <SafeAreaView style={styles.loaderBox}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="close" size={22} color={COLORS.text} />
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
   const workingDays = effectiveWorkingHours.flatMap((wh) => wh.days || []);
   const shopName =
-    shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en;
+    shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Barbershop';
 
   return (
     <SafeAreaView style={styles.safeArea}>
