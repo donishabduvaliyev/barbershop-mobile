@@ -46,4 +46,9 @@ export const FONTS = {
   bodySemiBold: 'Inter-600',
   bodyBold: 'Inter-700',
   bodyExtraBold: 'Inter-800',
+  regular: 'Inter-400',
+  medium: 'Inter-500',
+  semiBold: 'Inter-600',
+  bold: 'Inter-700',
+  extraBold: 'Inter-800',
 };
