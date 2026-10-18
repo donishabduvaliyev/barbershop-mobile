@@ -191,14 +191,31 @@ export default function AdminScreen() {
           )}
         </Pressable>
 
-        {/* Reload button */}
-        <Pressable
-          onPress={handleReload}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="reload" size={18} color={COLORS.text} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {/* Quick New Appointment Button */}
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              }
+              webViewRef.current?.postMessage(JSON.stringify({ type: 'OPEN_NEW_BOOKING' }));
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.quickAddBookingHeaderBtn}
+          >
+            <Ionicons name="add" size={16} color="#0A0A0C" />
+            <Text style={styles.quickAddBookingHeaderBtnText}>Bandlov</Text>
+          </Pressable>
+
+          {/* Reload button */}
+          <Pressable
+            onPress={handleReload}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="reload" size={18} color={COLORS.text} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Sleek Progress Bar (Only visible while loading) */}
@@ -383,6 +400,20 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     fontSize: 13,
     color: '#FFFFFF',
+  },
+  quickAddBookingHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    gap: 4,
+  },
+  quickAddBookingHeaderBtnText: {
+    fontFamily: FONTS.bold,
+    fontSize: 12,
+    color: '#0A0A0C',
   },
   iconBtn: {
     width: 34,
