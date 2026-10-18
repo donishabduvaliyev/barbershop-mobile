@@ -377,58 +377,90 @@ const AvailableShopResultCard = ({ shop, lang, router, presetDate, presetHour })
   );
 };
 
-// AdCarousel matching AdCarousel in SearchPege.jsx
+// AdCarousel matching AdCarousel in SearchPege.jsx with smooth horizontal paging
+const CARD_WIDTH = SCREEN_WIDTH - 32;
+
 const AdCarousel = ({ services, lang, router }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollRef = useRef(null);
+  const isInteracting = useRef(false);
 
   useEffect(() => {
     if (!services || services.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev === services.length - 1 ? 0 : prev + 1));
-    }, 3800);
+      if (isInteracting.current) return;
+      setCurrentIndex((prev) => {
+        const next = prev === services.length - 1 ? 0 : prev + 1;
+        scrollRef.current?.scrollTo({ x: next * CARD_WIDTH, animated: true });
+        return next;
+      });
+    }, 4500);
     return () => clearInterval(timer);
   }, [services]);
 
   if (!services || services.length === 0) return null;
-  const currentService = services[currentIndex];
-  if (!currentService) return null;
-
-  const currentName =
-    currentService.name?.[lang] ||
-    currentService.name?.uz ||
-    currentService.name?.ru ||
-    currentService.name?.en ||
-    'Featured';
 
   return (
-    <Pressable
-      onPress={() => router.push(`/shop/${currentService.id || currentService._id}`)}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      style={adStyles.container}
-    >
-      <Image
-        source={{
-          uri:
-            currentService.image ||
-            'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80',
+    <View style={adStyles.wrapper}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          isInteracting.current = true;
         }}
-        style={adStyles.image}
-      />
-      <View style={adStyles.gradientOverlay} />
-
-      {/* Ad Badge */}
-      <View style={adStyles.adBadge}>
-        <Text style={adStyles.adBadgeText}>Ad</Text>
-      </View>
-
-      {/* Info Overlay */}
-      <View style={adStyles.infoBox}>
-        <Text style={adStyles.serviceTitle}>{currentName}</Text>
-        <Text style={adStyles.serviceCategory}>{currentService.category}</Text>
-      </View>
+        onScrollEndDrag={() => {
+          setTimeout(() => {
+            isInteracting.current = false;
+          }, 2000);
+        }}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+          if (idx >= 0 && idx < services.length) {
+            setCurrentIndex(idx);
+          }
+          isInteracting.current = false;
+        }}
+        contentContainerStyle={adStyles.scrollContent}
+      >
+        {services.map((service, idx) => {
+          const name =
+            service.name?.[lang] ||
+            service.name?.uz ||
+            service.name?.ru ||
+            service.name?.en ||
+            'Featured';
+          return (
+            <Pressable
+              key={service._id || service.id || idx}
+              onPress={() => router.push(`/shop/${service.id || service._id}`)}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              style={adStyles.slide}
+            >
+              <Image
+                source={{
+                  uri:
+                    service.image ||
+                    'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80',
+                }}
+                style={adStyles.image}
+              />
+              <View style={adStyles.gradientOverlay} />
+              <View style={adStyles.adBadge}>
+                <Text style={adStyles.adBadgeText}>Ad</Text>
+              </View>
+              <View style={adStyles.infoBox}>
+                <Text style={adStyles.serviceTitle}>{name}</Text>
+                <Text style={adStyles.serviceCategory}>{service.category}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* Indicator Dots */}
-      <View style={adStyles.dotsRow}>
+      <View style={adStyles.dotsRow} pointerEvents="none">
         {services.map((_, idx) => (
           <View
             key={idx}
@@ -436,7 +468,7 @@ const AdCarousel = ({ services, lang, router }) => {
           />
         ))}
       </View>
-    </Pressable>
+    </View>
   );
 };
 
@@ -1173,14 +1205,22 @@ const resultCardStyles = StyleSheet.create({
 });
 
 const adStyles = StyleSheet.create({
-  container: {
-    height: 190, // h-48 in web
+  wrapper: {
+    height: 190,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#131317',
+  },
+  scrollContent: {
+    alignItems: 'center',
+  },
+  slide: {
+    width: SCREEN_WIDTH - 32,
+    height: 190,
+    position: 'relative',
   },
   image: {
     width: '100%',
@@ -1207,7 +1247,7 @@ const adStyles = StyleSheet.create({
   },
   infoBox: {
     position: 'absolute',
-    bottom: 12,
+    bottom: 14,
     left: 14,
     right: 14,
   },

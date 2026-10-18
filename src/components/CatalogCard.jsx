@@ -36,6 +36,7 @@ export const CatalogCard = ({ shop, style }) => {
 
   return (
     <AnimatedPressable
+      delayPressIn={60}
       onPressIn={() => {
         scale.value = withSpring(0.97, { damping: 18, stiffness: 300 });
       }}

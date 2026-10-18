@@ -53,7 +53,7 @@ function CustomBottomNav({ state, descriptors, navigation }) {
                 <Ionicons
                   name={iconName}
                   size={24}
-                  color={isFocused ? COLORS.accent : '#71717A'}
+                  color={isFocused ? '#D4AF5A' : '#A1A1AA'}
                 />
               </View>
               {/* Active gold dot matching web Navbar.jsx */}
@@ -79,6 +79,13 @@ export default function TabsLayout() {
       tabBar={(props) => <CustomBottomNav {...props} />}
       screenOptions={{
         headerShown: false,
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 0,
+        },
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('Home') }} />
@@ -105,16 +112,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     height: 60,
-    backgroundColor: 'rgba(19, 19, 23, 0.94)', // var(--color-surface)/80 backdrop-blur-xl
+    backgroundColor: '#16161C', // Solid deep surface - never washes out or turns black
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#27272F', // var(--color-border-soft)
+    borderWidth: 1.2,
+    borderColor: '#2E2E38',
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.5,
     shadowRadius: 14,
-    elevation: 10,
+    elevation: 12,
   },
   tabButton: {
     flex: 1,

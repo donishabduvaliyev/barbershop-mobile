@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -80,13 +80,17 @@ export const AnimatedSplashScreen = ({ isReady, onFinish }) => {
       })
     );
 
-    // 5. Total cinematic duration ~2.6s before dissolving into the app
+    // 5. Cinematic duration before dissolving into the app (2.1s)
     const timer = setTimeout(() => {
       setCanDismiss(true);
-    }, 2600);
+    }, 2100);
 
     return () => clearTimeout(timer);
   }, []);
+
+  const handleTapToSkip = () => {
+    setCanDismiss(true);
+  };
 
   // When animation finishes, smoothly fade into the app
   useEffect(() => {
@@ -190,7 +194,8 @@ export const AnimatedSplashScreen = ({ isReady, onFinish }) => {
       style={[styles.overlay, masterContainerStyle]}
       pointerEvents={canDismiss ? 'none' : 'auto'}
     >
-      <View style={styles.stage}>
+      <Pressable style={StyleSheet.absoluteFillObject} onPress={handleTapToSkip} />
+      <View style={styles.stage} pointerEvents="box-none">
         {/* The 4 Squares Cluster that assembles into the SmartChair logo mark */}
         <Animated.View style={[styles.clusterWrap, centerClusterStyle]}>
           {/* Tile 1: Top-Left (Outlined dark square) */}

@@ -7,9 +7,11 @@ import {
   Image,
   StyleSheet,
   Platform,
+  Linking,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -37,8 +39,24 @@ export default function MapScreen() {
   const { isTablet } = useResponsive();
   const mapRef = useRef(null);
 
+  const [viewMode, setViewMode] = useState('map'); // 'map' | 'list'
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedShop, setSelectedShop] = useState(null);
+  const [hasLocationPermission, setHasLocationPermission] = useState(false);
+
+  // Safely check foreground location permissions on mount without throwing SecurityException
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          setHasLocationPermission(true);
+        }
+      } catch (err) {
+        // Safe fallback
+      }
+    })();
+  }, []);
 
   const shopsWithCoords = useMemo(() => {
     return shops.filter((shop) => {
@@ -64,6 +82,7 @@ export default function MapScreen() {
         showToast('Location permission denied', 'error');
         return;
       }
+      setHasLocationPermission(true);
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -79,6 +98,22 @@ export default function MapScreen() {
     } catch {
       showToast('Unable to get current location', 'error');
     }
+  };
+
+  const openDirections = (shop) => {
+    if (!shop?.location?.coordinates) return;
+    const [lng, lat] = shop.location.coordinates;
+    const label = encodeURIComponent(
+      shop.name?.[lang] || shop.name?.uz || shop.name?.ru || shop.name?.en || 'Shop'
+    );
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${lat},${lng}`,
+      android: `geo:0,0?q=${lat},${lng}(${label})`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+    });
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+    });
   };
 
   const focusShop = (shop) => {
@@ -137,74 +172,178 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Interactive Map */}
+      {/* Main View: Interactive Map or List Fallback */}
       <View style={styles.mapArea}>
-        <MapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFillObject}
-          initialRegion={DEFAULT_REGION}
-          showsUserLocation
-          showsMyLocationButton={false}
-          userInterfaceStyle="dark"
-        >
-          {shopsWithCoords.map((shop) => {
-            const [lng, lat] = shop.location.coordinates;
-            const name =
-              shop.name?.[lang] ||
-              shop.name?.uz ||
-              shop.name?.ru ||
-              shop.name?.en ||
-              'Barbershop';
-            return (
-              <Marker
-                key={shop._id}
-                coordinate={{ latitude: lat, longitude: lng }}
-                title={name}
-                pinColor={
-                  selectedShop?._id === shop._id ? COLORS.accent : COLORS.telegram
-                }
-                onPress={() => setSelectedShop(shop)}
-              />
-            );
-          })}
-        </MapView>
-
-        {/* Floating Category Filters */}
-        <View style={styles.topOverlay}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterPills}
+        {viewMode === 'map' ? (
+          <MapView
+            ref={mapRef}
+            style={StyleSheet.absoluteFillObject}
+            initialRegion={DEFAULT_REGION}
+            showsUserLocation={hasLocationPermission}
+            showsMyLocationButton={false}
+            userInterfaceStyle="dark"
           >
-            {['All', 'Barbershop', 'Beauty Salon', 'Spa', 'Dentist'].map((cat) => {
-              const active = selectedCategory === cat;
+            <UrlTile
+              urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maximumZ={19}
+              flipY={false}
+            />
+            {shopsWithCoords.map((shop) => {
+              const [lng, lat] = shop.location.coordinates;
+              const name =
+                shop.name?.[lang] ||
+                shop.name?.uz ||
+                shop.name?.ru ||
+                shop.name?.en ||
+                'Barbershop';
               return (
-                <Pressable
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
-                  style={[styles.filterPill, active && styles.filterPillActive]}
-                >
-                  <Text
-                    style={[
-                      styles.filterPillText,
-                      active && styles.filterPillTextActive,
-                    ]}
-                  >
-                    {t(cat.replace(' ', ''), cat)}
-                  </Text>
-                </Pressable>
+                <Marker
+                  key={shop._id}
+                  coordinate={{ latitude: lat, longitude: lng }}
+                  title={name}
+                  pinColor={
+                    selectedShop?._id === shop._id ? COLORS.accent : COLORS.telegram
+                  }
+                  onPress={() => setSelectedShop(shop)}
+                />
               );
             })}
+          </MapView>
+        ) : (
+          <ScrollView
+            style={styles.listViewContainer}
+            contentContainerStyle={styles.listViewContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.listHeading}>
+              {t('NearbyShops', 'Nearby Shops')} ({shopsWithCoords.length})
+            </Text>
+            {shopsWithCoords.map((shop) => {
+              const name =
+                shop.name?.[lang] ||
+                shop.name?.uz ||
+                shop.name?.ru ||
+                shop.name?.en ||
+                'Barbershop';
+              const address =
+                shop.address?.[lang] || shop.address?.uz || shop.address?.en || '';
+              return (
+                <View key={shop._id} style={styles.listCard}>
+                  <Image
+                    source={{ uri: shop.image || FALLBACK_SHOP_IMAGE }}
+                    style={styles.listCardImg}
+                  />
+                  <View style={styles.listCardBody}>
+                    <View style={styles.listCardHeader}>
+                      <Text style={styles.listCardTitle} numberOfLines={1}>
+                        {name}
+                      </Text>
+                      <View style={styles.listRatingBadge}>
+                        <Ionicons name="star" size={13} color="#FBBF24" />
+                        <Text style={styles.listRatingText}>
+                          {Number(shop.rating || 5.0).toFixed(1)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.listCardSub} numberOfLines={1}>
+                      {address}
+                    </Text>
+                    <View style={styles.listCardActions}>
+                      <Pressable
+                        onPress={() => openDirections(shop)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        style={styles.directionsBtn}
+                      >
+                        <Ionicons name="navigate-outline" size={14} color={COLORS.accent} />
+                        <Text style={styles.directionsBtnText}>{t('Directions', 'Directions')}</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                          router.push(`/shop/${shop._id}`);
+                        }}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        style={styles.detailsBtn}
+                      >
+                        <Text style={styles.detailsBtnText}>{t('Services')}</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                          router.push(`/booking/${shop._id}`);
+                        }}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        style={styles.bookNowBtn}
+                      >
+                        <Text style={styles.bookNowBtnText}>{t('BookNow')}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+            <View style={{ height: 100 }} />
           </ScrollView>
+        )}
+
+        {/* Floating Top Header: Category Filters & Mode Toggle */}
+        <View style={styles.topOverlay}>
+          <View style={styles.topRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterPills}
+            >
+              {['All', 'Barbershop', 'Beauty Salon', 'Spa', 'Dentist'].map((cat) => {
+                const active = selectedCategory === cat;
+                return (
+                  <Pressable
+                    key={cat}
+                    onPress={() => setSelectedCategory(cat)}
+                    style={[styles.filterPill, active && styles.filterPillActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterPillText,
+                        active && styles.filterPillTextActive,
+                      ]}
+                    >
+                      {t(cat.replace(' ', ''), cat)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                setViewMode((m) => (m === 'map' ? 'list' : 'map'));
+              }}
+              style={styles.modeToggleBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={viewMode === 'map' ? 'list-outline' : 'map-outline'}
+                size={18}
+                color="#0A0A0C"
+              />
+              <Text style={styles.modeToggleText}>
+                {viewMode === 'map' ? t('List', 'List') : t('Map', 'Map')}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
-        {/* Locate Me Floating Action Button */}
-        <Pressable onPress={locateMe} style={styles.locateBtn}>
-          <Ionicons name="navigate" size={20} color="#000" />
-        </Pressable>
+        {/* Locate Me Floating Action Button (only in map mode) */}
+        {viewMode === 'map' && (
+          <Pressable onPress={locateMe} style={styles.locateBtn}>
+            <Ionicons name="navigate" size={20} color="#000" />
+          </Pressable>
+        )}
 
         {/* Animated Bottom Preview Card */}
-        {selectedShop && (
+        {viewMode === 'map' && selectedShop && (
           <Animated.View entering={FadeInDown.springify()} style={styles.previewCard}>
             <Image
               source={{ uri: selectedShop.image || FALLBACK_SHOP_IMAGE }}
@@ -222,6 +361,13 @@ export default function MapScreen() {
                 {selectedShop.address?.[lang] || selectedShop.address?.uz || ''}
               </Text>
               <View style={styles.previewActions}>
+                <Pressable
+                  onPress={() => openDirections(selectedShop)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  style={styles.directionsIconBtn}
+                >
+                  <Ionicons name="navigate-outline" size={16} color={COLORS.accent} />
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
@@ -318,6 +464,122 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'ios' ? 56 : 42,
     left: 0,
     right: 0,
+    zIndex: 10,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 14,
+  },
+  modeToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  modeToggleText: {
+    color: '#0A0A0C',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  listViewContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    paddingTop: Platform.OS === 'ios' ? 110 : 96,
+  },
+  listViewContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  listHeading: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  listCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  listCardImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface2,
+  },
+  listCardBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  listCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  listCardTitle: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '700',
+    flex: 1,
+  },
+  listRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  listRatingText: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  listCardSub: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  listCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(212, 175, 90, 0.12)',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  directionsBtnText: {
+    color: COLORS.accent,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  directionsIconBtn: {
+    backgroundColor: 'rgba(212, 175, 90, 0.14)',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterPills: {
     paddingHorizontal: 16,

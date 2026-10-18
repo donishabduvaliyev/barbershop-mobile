@@ -26,20 +26,21 @@ const ITEM_HEIGHT = 44;
 // iPhone wheel carousel time picker matching ScrollPickerColumn in barbershop-main Booking.jsx
 const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
   const scrollRef = useRef(null);
+  const isUserInteracting = useRef(false);
 
   useEffect(() => {
-    if (scrollRef.current && selectedValue) {
+    if (!isUserInteracting.current && scrollRef.current && selectedValue) {
       const idx = items.indexOf(selectedValue);
       if (idx !== -1) {
         scrollRef.current.scrollToOffset({
           offset: idx * ITEM_HEIGHT,
-          animated: true,
+          animated: false,
         });
       }
     }
   }, [selectedValue, items]);
 
-  const onMomentumEnd = (e) => {
+  const handleMomentumEnd = (e) => {
     const y = e.nativeEvent.contentOffset.y;
     const index = Math.round(y / ITEM_HEIGHT);
     const clampedIndex = Math.max(0, Math.min(items.length - 1, index));
@@ -48,10 +49,11 @@ const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
       if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
       onSelect(item);
     }
-    scrollRef.current?.scrollToOffset({
-      offset: clampedIndex * ITEM_HEIGHT,
-      animated: true,
-    });
+    isUserInteracting.current = false;
+  };
+
+  const handleScrollBegin = () => {
+    isUserInteracting.current = true;
   };
 
   return (
@@ -68,13 +70,16 @@ const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
         decelerationRate="fast"
         bounces={false}
         nestedScrollEnabled={true}
+        initialNumToRender={15}
+        maxToRenderPerBatch={15}
+        windowSize={5}
         getItemLayout={(_, index) => ({
           length: ITEM_HEIGHT,
           offset: ITEM_HEIGHT * index,
           index,
         })}
-        onMomentumScrollEnd={onMomentumEnd}
-        onScrollEndDrag={onMomentumEnd}
+        onScrollBeginDrag={handleScrollBegin}
+        onMomentumScrollEnd={handleMomentumEnd}
         ListHeaderComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
         ListFooterComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
         renderItem={({ item, index }) => {
@@ -82,12 +87,16 @@ const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
           return (
             <Pressable
               onPress={() => {
+                isUserInteracting.current = true;
                 if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
                 onSelect(item);
                 scrollRef.current?.scrollToOffset({
                   offset: index * ITEM_HEIGHT,
                   animated: true,
                 });
+                setTimeout(() => {
+                  isUserInteracting.current = false;
+                }, 150);
               }}
               style={pickerStyles.item}
               hitSlop={{ top: 6, bottom: 6, left: 14, right: 14 }}
@@ -217,16 +226,14 @@ export default function BookingScreen() {
         const [shopData, availData] = await Promise.all([shopRes.json(), availRes.json()]);
         setShop(shopData);
         setAvailability(availData);
-        if (!selectedServiceId && shopData.services?.length) {
-          setSelectedServiceId(presetServiceId || shopData.services[0]._id);
-        }
+        setSelectedServiceId((curr) => curr || presetServiceId || shopData.services?.[0]?._id || null);
       }
     } catch (err) {
       console.warn('Error fetching booking data:', err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [id, backEndUrl, presetServiceId, selectedServiceId]);
+  }, [id, backEndUrl, presetServiceId]);
 
   useEffect(() => {
     fetchAvailability();
@@ -238,7 +245,7 @@ export default function BookingScreen() {
     return subscribeShopAvailability(id, () => {
       fetchAvailability();
     });
-  }, [id, subscribeShopAvailability, fetchAvailability]);
+  }, [id]);
 
   const bookedSlots = useMemo(() => availability.bookedSlots || [], [availability.bookedSlots]);
   const staffCount = availability.staffCount || 0;
