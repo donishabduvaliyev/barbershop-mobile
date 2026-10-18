@@ -132,6 +132,9 @@ const resources = {
       ConfirmedCount: 'Confirmed',
       CompletedCount: 'Completed',
       SearchClients: 'Search by name or phone...',
+      CustomerView: 'Customer View',
+      BackToAdmin: 'Back to Dashboard',
+      ConfirmLogoutAdmin: 'Do you want to log out from the Owner Portal?',
       days: {
         Monday: 'Mon',
         Tuesday: 'Tue',
@@ -273,6 +276,9 @@ const resources = {
       ConfirmedCount: 'Подтверждены',
       CompletedCount: 'Завершены',
       SearchClients: 'Поиск по имени или номеру...',
+      CustomerView: 'Режим клиента',
+      BackToAdmin: 'Вернуться в панель',
+      ConfirmLogoutAdmin: 'Вы действительно хотите выйти из панели владельца?',
       days: {
         Monday: 'Пн',
         Tuesday: 'Вт',
@@ -414,6 +420,9 @@ const resources = {
       ConfirmedCount: 'Tasdiqlangan',
       CompletedCount: 'Yakunlangan',
       SearchClients: "Ism yoki raqam bo'yicha qidiruv...",
+      CustomerView: 'Mijoz ko‘rinishi',
+      BackToAdmin: 'Boshqaruvga qaytish',
+      ConfirmLogoutAdmin: 'Salon boshqaruvidan chiqmoqchimisiz?',
       days: {
         Monday: 'Dush',
         Tuesday: 'Sesh',

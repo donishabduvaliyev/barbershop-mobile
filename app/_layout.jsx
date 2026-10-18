@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,8 +13,19 @@ import { MOTION_ASSETS } from '../src/components/BrandAssets';
 import { COLORS } from '../src/theme/colors';
 
 function AppShell({ fontsLoaded }) {
-  const { isLoading } = useAppContext();
+  const router = useRouter();
+  const segments = useSegments();
+  const { isLoading, adminData, isCustomerPreview } = useAppContext();
   const [splashDone, setSplashDone] = useState(false);
+
+  // Once splash screen finishes: if user is a shop owner, directly open the Admin Panel!
+  useEffect(() => {
+    if (!splashDone) return;
+    const inAdminGroup = segments[0] === 'admin';
+    if (adminData?.isAdmin && !inAdminGroup && !isCustomerPreview) {
+      router.replace('/admin');
+    }
+  }, [splashDone, adminData?.isAdmin, isCustomerPreview, segments, router]);
 
   return (
     <View style={styles.root}>

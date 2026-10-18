@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import { Tabs } from 'expo-router';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
+import { useAppContext } from '../../src/context/AppContext';
 
 // Floating pill navigation bar mirroring barbershop-main/src/components/Navbar.jsx
 function CustomBottomNav({ state, descriptors, navigation }) {
@@ -72,27 +73,48 @@ function CustomBottomNav({ state, descriptors, navigation }) {
 }
 
 export default function TabsLayout() {
+  const router = useRouter();
   const { t } = useTranslation();
+  const { adminData, isCustomerPreview, setIsCustomerPreview } = useAppContext();
 
   return (
-    <Tabs
-      tabBar={(props) => <CustomBottomNav {...props} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 0,
-          height: 0,
-        },
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: t('Home') }} />
-      <Tabs.Screen name="search" options={{ title: t('Search') }} />
-      <Tabs.Screen name="map" options={{ title: t('Map') }} />
-      <Tabs.Screen name="profile" options={{ title: t('Profile') }} />
-    </Tabs>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      {adminData?.isAdmin && isCustomerPreview && (
+        <Pressable
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            }
+            setIsCustomerPreview(false);
+            router.replace('/admin');
+          }}
+          style={styles.ownerReturnBanner}
+        >
+          <Ionicons name="shield-checkmark" size={16} color="#0A0A0C" style={{ marginRight: 6 }} />
+          <Text style={styles.ownerReturnBannerText}>{t('BackToAdmin', 'Back to Dashboard')}</Text>
+          <Ionicons name="arrow-forward" size={14} color="#0A0A0C" style={{ marginLeft: 6 }} />
+        </Pressable>
+      )}
+
+      <Tabs
+        tabBar={(props) => <CustomBottomNav {...props} />}
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            position: 'absolute',
+            backgroundColor: 'transparent',
+            borderTopWidth: 0,
+            elevation: 0,
+            height: 0,
+          },
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: t('Home') }} />
+        <Tabs.Screen name="search" options={{ title: t('Search') }} />
+        <Tabs.Screen name="map" options={{ title: t('Map') }} />
+        <Tabs.Screen name="profile" options={{ title: t('Profile') }} />
+      </Tabs>
+    </View>
   );
 }
 
@@ -144,5 +166,27 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: '#D4AF5A', // var(--color-accent)
     marginTop: 3,
+  },
+  ownerReturnBanner: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    alignSelf: 'center',
+    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  ownerReturnBannerText: {
+    fontFamily: FONTS.bold,
+    fontSize: 13,
+    color: '#0A0A0C',
   },
 });

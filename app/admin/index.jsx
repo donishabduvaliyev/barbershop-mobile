@@ -50,6 +50,8 @@ export default function AdminScreen() {
     mobileToken,
     backEndUrl,
     showToast,
+    logout,
+    setIsCustomerPreview,
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState(''); // '' = all, 'pending', 'confirmed', 'completed', 'cancelled'
@@ -209,7 +211,41 @@ export default function AdminScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      setIsCustomerPreview(true);
+      router.replace('/(tabs)');
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('LogOut', 'Log Out'),
+      t('ConfirmLogoutAdmin', 'Do you want to log out from the Owner Portal?'),
+      [
+        { text: t('Cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('LogOut', 'Log Out'),
+          style: 'destructive',
+          onPress: async () => {
+            if (Platform.OS !== 'web') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            }
+            await logout();
+            router.replace('/(tabs)/profile');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCustomerPreview = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    setIsCustomerPreview(true);
+    router.push('/(tabs)');
   };
 
   const handleSelectShop = async (shopId) => {
@@ -742,8 +778,9 @@ export default function AdminScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Native App Bar */}
       <View style={styles.header}>
-        <Pressable onPress={handleClose} hitSlop={12} style={styles.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+        <Pressable onPress={handleCustomerPreview} hitSlop={8} style={styles.customerPreviewBtn}>
+          <Ionicons name="eye-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 4 }} />
+          <Text style={styles.customerPreviewText}>{t('CustomerView', 'Preview')}</Text>
         </Pressable>
 
         <Pressable
@@ -752,12 +789,12 @@ export default function AdminScreen() {
           style={styles.titleContainer}
         >
           <View style={styles.titleRow}>
-            <Ionicons name="storefront" size={16} color={COLORS.accent} style={{ marginRight: 6 }} />
+            <Ionicons name="storefront" size={15} color={COLORS.accent} style={{ marginRight: 5 }} />
             <Text style={styles.headerTitle} numberOfLines={1}>
               {resolveText(activeShop?.name, lang) || t('ShopDashboard', 'Shop Dashboard')}
             </Text>
             {hasMultipleShops && (
-              <Ionicons name="chevron-down" size={14} color={COLORS.accent} style={{ marginLeft: 4 }} />
+              <Ionicons name="chevron-down" size={13} color={COLORS.accent} style={{ marginLeft: 3 }} />
             )}
           </View>
           <Text style={styles.headerSubTitle}>
@@ -765,11 +802,16 @@ export default function AdminScreen() {
           </Text>
         </Pressable>
 
-        {/* Quick New Appointment CTA */}
-        <Pressable onPress={handleOpenNewBooking} style={styles.quickNewHeaderBtn} hitSlop={8}>
-          <Ionicons name="add" size={18} color="#0A0A0C" style={{ marginRight: 2 }} />
-          <Text style={styles.quickNewHeaderText}>{t('QuickAppointment', '+ New')}</Text>
-        </Pressable>
+        <View style={styles.headerRightActions}>
+          <Pressable onPress={handleOpenNewBooking} style={styles.quickNewHeaderBtn} hitSlop={8}>
+            <Ionicons name="add" size={18} color="#0A0A0C" style={{ marginRight: 2 }} />
+            <Text style={styles.quickNewHeaderText}>{t('QuickAppointment', '+ New')}</Text>
+          </Pressable>
+
+          <Pressable onPress={handleLogout} style={styles.logoutHeaderBtn} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Metrics Row */}
@@ -1397,11 +1439,39 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
     marginTop: 1,
   },
+  customerPreviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  customerPreviewText: {
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(242, 104, 92, 0.12)',
+  },
   quickNewHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.accent,
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     paddingVertical: 7,
     borderRadius: 18,
   },

@@ -68,8 +68,17 @@ export default function HomeScreen() {
     changeLanguage,
     userInfo,
     isSocketConnected,
+    adminData,
+    isCustomerPreview,
   } = useAppContext();
   const { isTablet, horizontalPadding } = useResponsive();
+
+  // If user is a shop owner, directly open the Admin Panel!
+  React.useEffect(() => {
+    if (adminData?.isAdmin && !isCustomerPreview) {
+      router.replace('/admin');
+    }
+  }, [adminData?.isAdmin, isCustomerPreview, router]);
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');

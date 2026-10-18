@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   TOKEN: '@smartchair_mobile_jwt',
   USER: '@smartchair_mobile_user',
   LANG: '@smartchair_mobile_lang',
+  ADMIN: '@smartchair_admin_data',
 };
 
 // Automatically detect local host IP when running on physical Android via Expo Go
@@ -39,6 +40,7 @@ export const AppProvider = ({ children }) => {
   const [toast, setToast] = useState(null);
   const [adminData, setAdminData] = useState(null); // { isAdmin, role, adminToken, adminPanelUrl, shops }
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
+  const [isCustomerPreview, setIsCustomerPreview] = useState(false);
 
   // Telegram Bot Deep-Link Auth state
   const [authSession, setAuthSession] = useState(null); // { sessionToken, tgDeepLink, webDeepLink }
@@ -65,10 +67,11 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        const [savedToken, savedUser, savedLang] = await Promise.all([
+        const [savedToken, savedUser, savedLang, savedAdmin] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.TOKEN),
           AsyncStorage.getItem(STORAGE_KEYS.USER),
           AsyncStorage.getItem(STORAGE_KEYS.LANG),
+          AsyncStorage.getItem(STORAGE_KEYS.ADMIN),
         ]);
         if (savedLang) {
           i18n.changeLanguage(savedLang);
@@ -76,6 +79,11 @@ export const AppProvider = ({ children }) => {
         if (savedToken && savedUser) {
           setMobileToken(savedToken);
           setUserInfo(JSON.parse(savedUser));
+        }
+        if (savedAdmin) {
+          try {
+            setAdminData(JSON.parse(savedAdmin));
+          } catch {}
         }
       } catch (err) {
         console.warn('Error loading persisted session:', err);
@@ -97,30 +105,6 @@ export const AppProvider = ({ children }) => {
       }).catch(() => {});
     }
   }, [backEndUrl, mobileToken]);
-
-  // Complete login & persist JWT + user
-  const handleAuthSuccess = useCallback(async (token, user) => {
-    setMobileToken(token);
-    setUserInfo(user);
-    setIsAuthenticating(false);
-    setAuthSession(null);
-
-    if (authSocketRef.current) {
-      authSocketRef.current.disconnect();
-      authSocketRef.current = null;
-    }
-
-    if (user?.language) {
-      i18n.changeLanguage(user.language);
-    }
-
-    await Promise.all([
-      AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token),
-      AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
-    ]).catch(() => {});
-
-    showToast(`Welcome, ${user?.name || 'Customer'}!`);
-  }, [showToast]);
 
   // Fetch initial home feed & all shops
   const refreshShops = useCallback(async () => {
@@ -175,29 +159,65 @@ export const AppProvider = ({ children }) => {
   }, [backEndUrl, mobileToken]);
 
   // Check if current authenticated user has shop owner or superadmin privileges
-  const checkAdminStatus = useCallback(async () => {
-    if (!mobileToken) {
+  const checkAdminStatus = useCallback(async (tokenOverride = null) => {
+    const token = tokenOverride || mobileToken;
+    if (!token) {
       setAdminData(null);
-      return;
+      await AsyncStorage.removeItem(STORAGE_KEYS.ADMIN).catch(() => {});
+      return null;
     }
     try {
       setIsCheckingAdmin(true);
       const res = await fetch(`${backEndUrl}/api/mobile/admin/check`, {
-        headers: { Authorization: `Bearer ${mobileToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setAdminData(data);
+        if (data?.isAdmin) {
+          await AsyncStorage.setItem(STORAGE_KEYS.ADMIN, JSON.stringify(data)).catch(() => {});
+        } else {
+          await AsyncStorage.removeItem(STORAGE_KEYS.ADMIN).catch(() => {});
+        }
+        return data;
       } else {
         setAdminData(null);
+        await AsyncStorage.removeItem(STORAGE_KEYS.ADMIN).catch(() => {});
       }
     } catch (err) {
       console.warn('Admin check error:', err.message);
-      setAdminData(null);
     } finally {
       setIsCheckingAdmin(false);
     }
+    return null;
   }, [backEndUrl, mobileToken]);
+
+  // Complete login & persist JWT + user
+  const handleAuthSuccess = useCallback(async (token, user) => {
+    setMobileToken(token);
+    setUserInfo(user);
+    setIsAuthenticating(false);
+    setAuthSession(null);
+
+    if (authSocketRef.current) {
+      authSocketRef.current.disconnect();
+      authSocketRef.current = null;
+    }
+
+    if (user?.language) {
+      i18n.changeLanguage(user.language);
+    }
+
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token),
+      AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+    ]).catch(() => {});
+
+    showToast(`Welcome, ${user?.name || 'Customer'}!`);
+
+    // Verify admin status immediately so app can open admin panel right away
+    await checkAdminStatus(token);
+  }, [checkAdminStatus, showToast]);
 
   // Switch active shop for multi-shop owner
   const switchAdminShop = useCallback(async (shopId) => {
@@ -432,9 +452,11 @@ export const AppProvider = ({ children }) => {
     setUserInfo(null);
     setBookings([]);
     setAdminData(null);
+    setIsCustomerPreview(false);
     await Promise.all([
       AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
       AsyncStorage.removeItem(STORAGE_KEYS.USER),
+      AsyncStorage.removeItem(STORAGE_KEYS.ADMIN),
     ]).catch(() => {});
   }, []);
 
@@ -510,6 +532,8 @@ export const AppProvider = ({ children }) => {
         isCheckingAdmin,
         checkAdminStatus,
         switchAdminShop,
+        isCustomerPreview,
+        setIsCustomerPreview,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -50,7 +50,15 @@ export default function ProfileScreen() {
     refreshProfile,
     showToast,
     adminData,
+    isCustomerPreview,
   } = useAppContext();
+
+  // If user is a shop owner, directly open the Admin Panel!
+  useEffect(() => {
+    if (adminData?.isAdmin && !isCustomerPreview) {
+      router.replace('/admin');
+    }
+  }, [adminData?.isAdmin, isCustomerPreview, router]);
 
   // Active sub-page: null | 'userInfo' | 'bookingHistory' | 'favorites'
   const [activeSubPage, setActiveSubPage] = useState(null);
