@@ -223,13 +223,21 @@ export default function MapScreen() {
               </Text>
               <View style={styles.previewActions}>
                 <Pressable
-                  onPress={() => router.push(`/shop/${selectedShop._id}`)}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                    router.push(`/shop/${selectedShop._id}`);
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   style={styles.detailsBtn}
                 >
                   <Text style={styles.detailsBtnText}>{t('Services')}</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => router.push(`/booking/${selectedShop._id}`)}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                    router.push(`/booking/${selectedShop._id}`);
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   style={styles.bookNowBtn}
                 >
                   <Text style={styles.bookNowBtnText}>{t('BookNow')}</Text>
@@ -238,6 +246,7 @@ export default function MapScreen() {
             </View>
             <Pressable
               onPress={() => setSelectedShop(null)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.closePreviewBtn}
             >
               <Ionicons name="close" size={18} color={COLORS.textMuted} />
@@ -338,7 +347,7 @@ const styles = StyleSheet.create({
   locateBtn: {
     position: 'absolute',
     right: 16,
-    bottom: 24,
+    bottom: 86,
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -346,12 +355,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
   },
   previewCard: {
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 20,
+    bottom: 84,
     maxWidth: 480,
     backgroundColor: COLORS.surface,
     borderRadius: 20,
@@ -361,6 +374,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
   },
   previewImage: {
     width: 84,

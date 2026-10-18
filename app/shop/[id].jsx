@@ -63,7 +63,11 @@ export default function ShopDetailScreen() {
   if (!shop) {
     return (
       <SafeAreaView style={styles.loaderContainer}>
-        <Pressable onPress={() => router.back()} style={styles.circleBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          style={styles.circleBtn}
+        >
           <Ionicons name="arrow-back" size={22} color="#FFF" />
         </Pressable>
       </SafeAreaView>
@@ -95,11 +99,16 @@ export default function ShopDetailScreen() {
             style={styles.heroImage}
           />
           <View style={styles.heroTopActions}>
-            <Pressable onPress={() => router.back()} style={styles.circleBtn}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              style={styles.circleBtn}
+            >
               <Ionicons name="arrow-back" size={22} color="#FFF" />
             </Pressable>
             <Pressable
               onPress={() => toggleFavorite(shop._id)}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
               style={styles.circleBtn}
             >
               <Ionicons
@@ -272,10 +281,13 @@ export default function ShopDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Book CTA styled after button-primary.svg */}
       <View style={styles.bottomBar}>
         <Pressable
-          onPress={() => router.push(`/booking/${shop._id}`)}
+          onPress={() => {
+            if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+            router.push(`/booking/${shop._id}`);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.bookCtaBtn}
         >
           <Text style={styles.bookCtaText}>{t('BookNow')}</Text>

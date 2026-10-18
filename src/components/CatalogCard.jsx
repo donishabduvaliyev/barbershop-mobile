@@ -67,7 +67,7 @@ export const CatalogCard = ({ shop, style }) => {
             toggleFavorite(shop._id);
           }}
           style={styles.favoriteBtn}
-          hitSlop={6}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons
             name={isFavorited ? 'heart' : 'heart-outline'}

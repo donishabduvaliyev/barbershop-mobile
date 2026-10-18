@@ -109,6 +109,7 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/(tabs)/profile')}
             style={styles.profileBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <View style={styles.userIconCircle}>
               <Ionicons name="person-outline" size={18} color="#9C9CA6" />
@@ -156,6 +157,7 @@ export default function HomeScreen() {
             />
             <Pressable
               onPress={handleSearchSubmit}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.searchSubmitBtn}
             >
               <Text style={styles.searchSubmitText}>{t('search', 'Search')}</Text>
@@ -172,6 +174,7 @@ export default function HomeScreen() {
           {/* "All" button */}
           <Pressable
             onPress={() => handleCategorySelect('All')}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
             style={[
               styles.categoryPill,
               selectedCategory === 'All'
@@ -198,6 +201,7 @@ export default function HomeScreen() {
               <Pressable
                 key={cat.id}
                 onPress={() => handleCategorySelect(cat.title.en)}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
                 style={[
                   styles.categoryPill,
                   isSelected
@@ -405,15 +409,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyRegular,
     fontSize: 13.5,
     height: '100%',
-    paddingRight: 64,
+    paddingRight: 6,
   },
   searchSubmitBtn: {
-    position: 'absolute',
-    right: 8,
     backgroundColor: '#D4AF5A',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderRadius: 10,
+    marginLeft: 6,
   },
   searchSubmitText: {
     color: '#0A0A0C',
@@ -459,7 +462,7 @@ const styles = StyleSheet.create({
   },
   mainScrollContent: {
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 105,
   },
   catalogSection: {
     marginBottom: 24,

@@ -186,7 +186,10 @@ export const AnimatedSplashScreen = ({ isReady, onFinish }) => {
   }));
 
   return (
-    <Animated.View style={[styles.overlay, masterContainerStyle]} pointerEvents="auto">
+    <Animated.View
+      style={[styles.overlay, masterContainerStyle]}
+      pointerEvents={canDismiss ? 'none' : 'auto'}
+    >
       <View style={styles.stage}>
         {/* The 4 Squares Cluster that assembles into the SmartChair logo mark */}
         <Animated.View style={[styles.clusterWrap, centerClusterStyle]}>

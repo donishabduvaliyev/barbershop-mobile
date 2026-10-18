@@ -88,6 +88,7 @@ export default function ProfileScreen() {
         <View style={styles.subHeader}>
           <Pressable
             onPress={() => setActiveSubPage(null)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.backBtn}
           >
             <Ionicons name="chevron-back" size={24} color="#D4AF5A" />
@@ -126,6 +127,7 @@ export default function ProfileScreen() {
         <View style={styles.subHeader}>
           <Pressable
             onPress={() => setActiveSubPage(null)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.backBtn}
           >
             <Ionicons name="chevron-back" size={24} color="#D4AF5A" />
@@ -207,6 +209,7 @@ export default function ProfileScreen() {
         <View style={styles.subHeader}>
           <Pressable
             onPress={() => setActiveSubPage(null)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.backBtn}
           >
             <Ionicons name="chevron-back" size={24} color="#D4AF5A" />
@@ -320,7 +323,11 @@ export default function ProfileScreen() {
         <View style={styles.menuCard}>
           {/* 1. My Details */}
           <Pressable
-            onPress={() => setActiveSubPage('userInfo')}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+              setActiveSubPage('userInfo');
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[styles.menuItem, styles.rowBorder]}
           >
             <View style={styles.menuItemLeft}>
@@ -332,7 +339,11 @@ export default function ProfileScreen() {
 
           {/* 2. Booking History */}
           <Pressable
-            onPress={() => setActiveSubPage('bookingHistory')}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+              setActiveSubPage('bookingHistory');
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[styles.menuItem, styles.rowBorder]}
           >
             <View style={styles.menuItemLeft}>
@@ -344,7 +355,11 @@ export default function ProfileScreen() {
 
           {/* 3. Favorites */}
           <Pressable
-            onPress={() => setActiveSubPage('favorites')}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+              setActiveSubPage('favorites');
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.menuItem}
           >
             <View style={styles.menuItemLeft}>
@@ -356,7 +371,14 @@ export default function ProfileScreen() {
         </View>
 
         {/* Log Out Button matching Profile.jsx line 95 */}
-        <Pressable onPress={logout} style={styles.logoutBtn}>
+        <Pressable
+          onPress={() => {
+            if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+            logout();
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.logoutBtn}
+        >
           <Ionicons name="log-out-outline" size={22} color={COLORS.danger} />
           <Text style={styles.logoutText}>{t('LogOut', 'Log Out')}</Text>
         </Pressable>
@@ -409,7 +431,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
     maxWidth: 600,
     alignSelf: 'center',
     width: '100%',

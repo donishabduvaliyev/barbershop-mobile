@@ -35,7 +35,7 @@ export const LanguageActionSheet = () => {
       <Pressable
         onPress={handleOpen}
         style={styles.triggerBtn}
-        hitSlop={6}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         accessibilityLabel="Open language selector"
       >
         <Ionicons name="language-outline" size={20} color={COLORS.textMuted} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,93 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { BookingSheetSkeleton } from '../../src/components/Skeletons';
+
+const ITEM_HEIGHT = 44;
+
+// iPhone wheel carousel time picker matching ScrollPickerColumn in barbershop-main Booking.jsx
+const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current && selectedValue) {
+      const idx = items.indexOf(selectedValue);
+      if (idx !== -1) {
+        scrollRef.current.scrollToOffset({
+          offset: idx * ITEM_HEIGHT,
+          animated: true,
+        });
+      }
+    }
+  }, [selectedValue, items]);
+
+  const onMomentumEnd = (e) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const index = Math.round(y / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(items.length - 1, index));
+    const item = items[clampedIndex];
+    if (item && item !== selectedValue) {
+      if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+      onSelect(item);
+    }
+    scrollRef.current?.scrollToOffset({
+      offset: clampedIndex * ITEM_HEIGHT,
+      animated: true,
+    });
+  };
+
+  return (
+    <View style={pickerStyles.container}>
+      {/* Selection Lens matching web bg-surface-3/70 rounded-lg */}
+      <View style={pickerStyles.lens} pointerEvents="none" />
+
+      <FlatList
+        ref={scrollRef}
+        data={items}
+        keyExtractor={(item) => item}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        bounces={false}
+        nestedScrollEnabled={true}
+        getItemLayout={(_, index) => ({
+          length: ITEM_HEIGHT,
+          offset: ITEM_HEIGHT * index,
+          index,
+        })}
+        onMomentumScrollEnd={onMomentumEnd}
+        onScrollEndDrag={onMomentumEnd}
+        ListHeaderComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
+        ListFooterComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
+        renderItem={({ item, index }) => {
+          const isSelected = item === selectedValue;
+          return (
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                onSelect(item);
+                scrollRef.current?.scrollToOffset({
+                  offset: index * ITEM_HEIGHT,
+                  animated: true,
+                });
+              }}
+              style={pickerStyles.item}
+              hitSlop={{ top: 6, bottom: 6, left: 14, right: 14 }}
+            >
+              <Text
+                style={[
+                  pickerStyles.itemText,
+                  isSelected && pickerStyles.itemTextSelected,
+                ]}
+              >
+                {item}
+              </Text>
+            </Pressable>
+          );
+        }}
+      />
+    </View>
+  );
+};
 
 const pad = (num) => String(num).padStart(2, '0');
 const normParam = (v) => (Array.isArray(v) ? v[0] : v);
@@ -374,7 +462,11 @@ export default function BookingScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Back Button */}
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <Ionicons name="arrow-back" size={22} color="#F4F4F5" />
           <Text style={styles.backText}>{t('Back', 'Back')}</Text>
         </Pressable>
@@ -470,6 +562,7 @@ export default function BookingScreen() {
               <Pressable
                 onPress={() => setIsModalOpen(false)}
                 style={styles.closeBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Ionicons name="close" size={22} color="#9C9CA6" />
               </Pressable>
@@ -637,35 +730,18 @@ export default function BookingScreen() {
                 </ScrollView>
               </View>
 
-              {/* 4. Choose Time Slots */}
+              {/* 4. Choose Time - iPhone Wheel Carousel matching Booking.jsx */}
               <View style={styles.modalSection}>
                 <Text style={styles.sectionSubtitle}>
-                  {t('ChooseTime', 'Available Time Slots')}
+                  {t('ChooseTime', 'Choose a Time')}
                 </Text>
                 {availableHours.length > 0 ? (
-                  <View style={styles.hoursGrid}>
-                    {availableHours.map((hour) => {
-                      const isSelected = selectedHour === hour;
-                      return (
-                        <Pressable
-                          key={hour}
-                          onPress={() => setSelectedHour(hour)}
-                          style={[
-                            styles.hourPill,
-                            isSelected && styles.hourPillActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.hourPillText,
-                              isSelected && styles.hourPillTextActive,
-                            ]}
-                          >
-                            {hour}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
+                  <View style={styles.wheelWrapper}>
+                    <ScrollPickerColumn
+                      items={availableHours}
+                      selectedValue={selectedHour}
+                      onSelect={setSelectedHour}
+                    />
                   </View>
                 ) : (
                   <View style={styles.noHoursBox}>
@@ -994,50 +1070,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  dateNumTextActive: {
-    color: '#0A0A0C',
-  },
-  hoursGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  hourPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#1A1A1F',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#27272E',
-  },
-  hourPillActive: {
-    backgroundColor: '#D4AF5A',
-    borderColor: '#D4AF5A',
-  },
-  hourPillText: {
-    color: '#F4F4F5',
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
-  },
-  hourPillTextActive: {
-    color: '#0A0A0C',
-    fontWeight: '700',
+  wheelWrapper: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noHoursBox: {
-    paddingVertical: 20,
+    paddingVertical: 36,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   noHoursText: {
     color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 13,
+    fontSize: 14,
+    textAlign: 'center',
   },
   confirmBookingBtn: {
     backgroundColor: '#D4AF5A',
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#D4AF5A',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   btnDisabled: {
     opacity: 0.5,
@@ -1047,5 +1105,47 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
     fontWeight: '700',
+  },
+});
+
+const pickerStyles = StyleSheet.create({
+  container: {
+    height: 190, // h-48 in web
+    width: '100%',
+    maxWidth: 160,
+    alignSelf: 'center',
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  lens: {
+    position: 'absolute',
+    top: (190 - ITEM_HEIGHT) / 2,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    backgroundColor: '#27272F', // var(--color-surface-3)
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D4AF5A',
+    zIndex: 1,
+  },
+  item: {
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  itemText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 16,
+    color: '#9C9CA6',
+    opacity: 0.45,
+  },
+  itemTextSelected: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 21,
+    fontWeight: '700',
+    color: '#D4AF5A',
+    opacity: 1,
   },
 });
