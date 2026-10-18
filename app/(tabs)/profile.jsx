@@ -39,6 +39,7 @@ export default function ProfileScreen() {
     logout,
     refreshProfile,
     showToast,
+    adminData,
   } = useAppContext();
 
   // Active sub-page: null | 'userInfo' | 'bookingHistory' | 'favorites'
@@ -320,8 +321,69 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Admin / Shop Owner Card (shown automatically when user has owner/superadmin privileges) */}
+        {adminData?.isAdmin && (
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+              router.push('/admin');
+            }}
+            style={styles.adminBannerCard}
+          >
+            <View style={styles.adminBannerLeft}>
+              <View style={styles.adminBadgeCircle}>
+                <Ionicons
+                  name={adminData.role === 'superadmin' ? 'shield-checkmark' : 'storefront'}
+                  size={20}
+                  color="#0A0A0C"
+                />
+              </View>
+              <View style={styles.adminBannerTextCol}>
+                <View style={styles.adminTitleRow}>
+                  <Text style={styles.adminBannerTitle}>
+                    {adminData.role === 'superadmin'
+                      ? t('SuperAdminPortal', 'Super Admin')
+                      : t('ShopOwnerPortal', 'Owner Dashboard')}
+                  </Text>
+                  <View style={styles.adminRolePill}>
+                    <Text style={styles.adminRolePillText}>
+                      {adminData.role === 'superadmin' ? 'SUPER' : 'OWNER'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.adminBannerSub} numberOfLines={1}>
+                  {adminData.role === 'superadmin'
+                    ? t('ManageAllShopsDesc', 'Open platform dashboard & analytics')
+                    : (adminData.shops?.[0]?.name || t('ManageYourShop', 'Manage appointments & staff'))}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={24} color={COLORS.accent} />
+          </Pressable>
+        )}
+
         {/* Navigation List matching Profile.jsx line 86 */}
         <View style={styles.menuCard}>
+          {/* Admin Dashboard item if owner */}
+          {adminData?.isAdmin && (
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                router.push('/admin');
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[styles.menuItem, styles.rowBorder]}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="speedometer-outline" size={24} color={COLORS.accent} />
+                <Text style={[styles.menuItemLabel, { color: COLORS.accent }]}>
+                  {t('AdminDashboard', 'Admin Dashboard')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.accent} />
+            </Pressable>
+          )}
+
           {/* 1. My Details */}
           <Pressable
             onPress={() => {
@@ -446,6 +508,67 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#27272E',
+  },
+  adminBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#171612',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 175, 90, 0.45)',
+  },
+  adminBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  adminBadgeCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  adminBannerTextCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  adminTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  adminBannerTitle: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.displaySemiBold,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  adminRolePill: {
+    backgroundColor: 'rgba(212, 175, 90, 0.18)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: COLORS.accent,
+  },
+  adminRolePillText: {
+    color: COLORS.accent,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  adminBannerSub: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 12,
   },
   userAvatar: {
     width: 60,

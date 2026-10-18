@@ -37,6 +37,8 @@ export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [toast, setToast] = useState(null);
+  const [adminData, setAdminData] = useState(null); // { isAdmin, role, adminToken, adminPanelUrl, shops }
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
 
   // Telegram Bot Deep-Link Auth state
   const [authSession, setAuthSession] = useState(null); // { sessionToken, tgDeepLink, webDeepLink }
@@ -172,13 +174,67 @@ export const AppProvider = ({ children }) => {
     }
   }, [backEndUrl, mobileToken]);
 
+  // Check if current authenticated user has shop owner or superadmin privileges
+  const checkAdminStatus = useCallback(async () => {
+    if (!mobileToken) {
+      setAdminData(null);
+      return;
+    }
+    try {
+      setIsCheckingAdmin(true);
+      const res = await fetch(`${backEndUrl}/api/mobile/admin/check`, {
+        headers: { Authorization: `Bearer ${mobileToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminData(data);
+      } else {
+        setAdminData(null);
+      }
+    } catch (err) {
+      console.warn('Admin check error:', err.message);
+      setAdminData(null);
+    } finally {
+      setIsCheckingAdmin(false);
+    }
+  }, [backEndUrl, mobileToken]);
+
+  // Switch active shop for multi-shop owner
+  const switchAdminShop = useCallback(async (shopId) => {
+    if (!mobileToken || !shopId) return null;
+    try {
+      const res = await fetch(`${backEndUrl}/api/mobile/admin/switch-shop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mobileToken}`,
+        },
+        body: JSON.stringify({ shopId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminData((prev) => (prev ? {
+          ...prev,
+          adminToken: data.adminToken,
+          currentShop: data.shop,
+        } : prev));
+        return data.adminToken;
+      }
+    } catch (err) {
+      console.warn('Switch admin shop error:', err.message);
+    }
+    return null;
+  }, [backEndUrl, mobileToken]);
+
   useEffect(() => {
     if (mobileToken) {
       refreshProfile();
+      checkAdminStatus();
     } else {
       setBookings([]);
+      setAdminData(null);
     }
-  }, [mobileToken, refreshProfile]);
+  }, [mobileToken, refreshProfile, checkAdminStatus]);
 
   // Connect live Socket.io client for real-time Web <-> Mobile <-> Admin sync
   useEffect(() => {
@@ -375,6 +431,7 @@ export const AppProvider = ({ children }) => {
     setMobileToken(null);
     setUserInfo(null);
     setBookings([]);
+    setAdminData(null);
     await Promise.all([
       AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
       AsyncStorage.removeItem(STORAGE_KEYS.USER),
@@ -449,6 +506,10 @@ export const AppProvider = ({ children }) => {
         logout,
         favoriteIds,
         toggleFavorite,
+        adminData,
+        isCheckingAdmin,
+        checkAdminStatus,
+        switchAdminShop,
       }}
     >
       {children}
