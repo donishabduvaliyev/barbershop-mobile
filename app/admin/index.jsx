@@ -16,6 +16,8 @@ import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
+import { useAppContext } from '../../src/context/AppContext';
+
 const resolveText = (val, lang = 'uz') => {
   if (!val) return '';
   if (typeof val === 'string') return val;
