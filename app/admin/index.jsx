@@ -16,11 +16,19 @@ import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
-import { useAppContext } from '../../src/context/AppContext';
+const resolveText = (val, lang = 'uz') => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val[lang] || val.uz || val.ru || val.en || '';
+  }
+  return String(val);
+};
 
 export default function AdminScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n?.language || 'uz';
   const { adminData, switchAdminShop, checkAdminStatus, mobileToken } = useAppContext();
 
   const webViewRef = useRef(null);
@@ -151,7 +159,7 @@ export default function AdminScreen() {
             <Text style={styles.headerTitle} numberOfLines={1}>
               {isSuperAdmin
                 ? t('SuperAdminDashboard', 'Super Admin')
-                : activeShop?.name || t('ShopDashboard', 'Shop Dashboard')}
+                : resolveText(activeShop?.name, lang) || t('ShopDashboard', 'Shop Dashboard')}
             </Text>
             {hasMultipleShops && (
               <Ionicons
@@ -258,7 +266,7 @@ export default function AdminScreen() {
                       style={{ marginRight: 12 }}
                     />
                     <Text style={[styles.shopItemName, isSelected && styles.shopItemNameSelected]}>
-                      {shop.name}
+                      {resolveText(shop.name, lang)}
                     </Text>
                     {isSelected && (
                       <Ionicons

@@ -22,9 +22,19 @@ import { CatalogCard } from '../../src/components/CatalogCard';
 import { SmartChairLogoMark } from '../../src/components/BrandAssets';
 
 // Faithful React Native replication of Profile.jsx, UserInfo.jsx, BookingHistory.jsx from barbershop-main
+const resolveText = (val, lang = 'uz') => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val[lang] || val.uz || val.ru || val.en || '';
+  }
+  return String(val);
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const {
     backEndUrl,
     mobileToken,
@@ -159,18 +169,18 @@ export default function ProfileScreen() {
                     ]}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.bookingShopName}>{booking.shopName}</Text>
+                      <Text style={styles.bookingShopName}>{resolveText(booking.shopName, lang)}</Text>
                       <Text style={styles.bookingDate}>
                         {new Date(booking.requestedTime).toLocaleString()}
                       </Text>
                       {booking.serviceName && (
                         <Text style={styles.bookingMeta}>
-                          ✂️ {booking.serviceName}
+                          ✂️ {resolveText(booking.serviceName, lang)}
                         </Text>
                       )}
                       {booking.staffName && (
                         <Text style={styles.bookingMeta}>
-                          💈 {booking.staffName}
+                          💈 {resolveText(booking.staffName, lang)}
                         </Text>
                       )}
                     </View>
@@ -354,7 +364,7 @@ export default function ProfileScreen() {
                 <Text style={styles.adminBannerSub} numberOfLines={1}>
                   {adminData.role === 'superadmin'
                     ? t('ManageAllShopsDesc', 'Open platform dashboard & analytics')
-                    : (adminData.shops?.[0]?.name || t('ManageYourShop', 'Manage appointments & staff'))}
+                    : (resolveText(adminData.shops?.[0]?.name, lang) || t('ManageYourShop', 'Manage appointments & staff'))}
                 </Text>
               </View>
             </View>
