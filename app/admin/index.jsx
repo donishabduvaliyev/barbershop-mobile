@@ -198,7 +198,19 @@ export default function AdminScreen() {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
               }
-              webViewRef.current?.postMessage(JSON.stringify({ type: 'OPEN_NEW_BOOKING' }));
+              const script = `
+                (function() {
+                  if (typeof window.__openManualBooking === 'function') {
+                    window.__openManualBooking();
+                  } else {
+                    var ev = new MessageEvent('message', { data: { type: 'OPEN_NEW_BOOKING' } });
+                    window.dispatchEvent(ev);
+                    document.dispatchEvent(ev);
+                  }
+                })();
+                true;
+              `;
+              webViewRef.current?.injectJavaScript(script);
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.quickAddBookingHeaderBtn}
