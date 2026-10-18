@@ -540,9 +540,14 @@ export default function BookingScreen() {
         <View style={styles.ctaWrap}>
           <Pressable
             onPress={() => {
+              if (!phone.trim()) {
+                Alert.alert('Required', t('Please enter your phone number', 'Please enter your phone number'));
+                return;
+              }
               if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
               setIsModalOpen(true);
             }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.selectDateTimeBtn}
           >
             <Text style={styles.selectDateTimeText}>

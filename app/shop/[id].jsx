@@ -326,9 +326,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   circleBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(10, 10, 12, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
