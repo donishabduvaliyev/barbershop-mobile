@@ -22,7 +22,9 @@
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "ios": {
@@ -43,6 +45,12 @@
         }
       ],
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "12dcb4b4-fd06-472d-882c-67f62d4354b3"
+      }
+    }
   }
 }
