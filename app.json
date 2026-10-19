@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "icon": "./assets/branding/icon.png",
     "splash": {
-      "image": "./assets/branding/icon.png",
+      "image": "./assets/branding/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0A0A0C"
     },
@@ -18,7 +18,7 @@
       "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/adaptive-icon.png",
-        "backgroundColor": "#0A0A0C"
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
