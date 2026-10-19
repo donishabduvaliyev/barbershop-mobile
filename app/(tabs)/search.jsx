@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
@@ -566,14 +566,25 @@ const HorizontalCarousel = ({ title, services, lang, router, badge }) => {
 // Main Search Screen matching SearchPege.jsx in barbershop-main
 export default function SearchScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const { backEndUrl, showToast } = useAppContext();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState(params?.query ? String(params.query) : '');
+  const [activeCategory, setActiveCategory] = useState(params?.category ? String(params.category) : 'All');
   const [shopLists, setShopLists] = useState({ advertisedShops: [], categories: [] });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync params if updated while already mounted
+  useEffect(() => {
+    if (params?.query !== undefined && params?.query !== searchTerm) {
+      setSearchTerm(String(params.query));
+    }
+    if (params?.category !== undefined && params?.category !== activeCategory) {
+      setActiveCategory(String(params.category));
+    }
+  }, [params?.query, params?.category]);
 
   // "Find available now" state matching SearchPege.jsx
   const [isAvailableSheetOpen, setIsAvailableSheetOpen] = useState(false);
@@ -682,12 +693,12 @@ export default function SearchScreen() {
         {/* Search Input */}
         <View style={styles.searchInputRow}>
           <View style={styles.searchInputWrap}>
-            <Ionicons name="search" size={19} color="#71717A" style={{ marginRight: 8 }} />
+            <Ionicons name="search" size={19} color="#D4AF5A" style={{ marginRight: 8 }} />
             <TextInput
               value={searchTerm}
               onChangeText={setSearchTerm}
               placeholder={t('Search for salons, spas, etc.', 'Search for salons, spas, etc.')}
-              placeholderTextColor="#71717A"
+              placeholderTextColor="#9C9CA6"
               style={styles.textInput}
               returnKeyType="search"
             />

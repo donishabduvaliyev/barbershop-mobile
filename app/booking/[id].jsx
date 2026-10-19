@@ -403,6 +403,24 @@ export default function BookingScreen() {
       return;
     }
 
+    if (!mobileToken) {
+      Alert.alert(
+        t('LoginRequired', 'Login Required'),
+        t('PleaseLogInToBook', 'Please log in with Telegram from your Profile to confirm your booking request.'),
+        [
+          { text: t('Cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('LogIn', 'Log In with Telegram'),
+            onPress: () => {
+              setIsModalOpen(false);
+              router.push('/(tabs)/profile');
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const bookingDate = new Date(selectedDate);

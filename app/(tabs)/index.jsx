@@ -121,7 +121,7 @@ export default function HomeScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <View style={styles.userIconCircle}>
-              <Ionicons name="person-outline" size={18} color="#9C9CA6" />
+              <Ionicons name="person-outline" size={18} color="#D4AF5A" />
             </View>
             <View style={styles.greetingCol}>
               <Text style={styles.welcomeText}>
@@ -152,7 +152,7 @@ export default function HomeScreen() {
             <Ionicons
               name="search"
               size={18}
-              color="#64646D"
+              color="#D4AF5A"
               style={styles.searchIcon}
             />
             <TextInput
@@ -160,7 +160,7 @@ export default function HomeScreen() {
               onChangeText={setSearchTerm}
               onSubmitEditing={handleSearchSubmit}
               placeholder={t('searchbar', 'Search for barbershops, salons...')}
-              placeholderTextColor="#64646D"
+              placeholderTextColor="#9C9CA6"
               style={styles.searchInput}
               returnKeyType="search"
             />

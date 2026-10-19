@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback, Component } from 'react';
 import {
   View,
   Text,
@@ -9,57 +9,87 @@ import {
   Platform,
   Linking,
 } from 'react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '../../src/theme/colors';
+import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 
-// Default center: Namangan / Tashkent Uzbekistan
-const DEFAULT_REGION = {
-  latitude: 41.0011,
-  longitude: 71.6683,
-  latitudeDelta: 0.08,
-  longitudeDelta: 0.08,
+// Error Boundary to ensure map screen NEVER crashes the entire app
+class MapErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error) {
+    console.warn('Map Screen Caught Error:', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorFallbackContainer}>
+          <Ionicons name="map-outline" size={48} color={COLORS.accent} />
+          <Text style={styles.errorFallbackTitle}>Map unavailable</Text>
+          <Text style={styles.errorFallbackSub}>Please switch to List View below.</Text>
+          <Pressable
+            onPress={() => this.setState({ hasError: false })}
+            style={styles.errorRetryBtn}
+          >
+            <Text style={styles.errorRetryText}>Reload</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Default center: Uzbekistan (Tashkent / Namangan)
+const DEFAULT_CENTER = {
+  lat: 41.0011,
+  lng: 71.6683,
+  zoom: 13,
 };
 
 const FALLBACK_SHOP_IMAGE =
   'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80';
 
-export default function MapScreen() {
+const CATEGORY_EMOJIS = {
+  barbershop: '💈',
+  'hair salon': '💇‍♀️',
+  'beauty salon': '💅',
+  spa: '🧖',
+  dentist: '🦷',
+  default: '✂️',
+};
+
+function getCategoryEmoji(cat) {
+  const key = String(cat || '').toLowerCase();
+  return CATEGORY_EMOJIS[key] || CATEGORY_EMOJIS.default;
+}
+
+function MapScreenContent() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const { shops, showToast } = useAppContext();
   const { isTablet } = useResponsive();
-  const mapRef = useRef(null);
+  const webViewRef = useRef(null);
 
   const [viewMode, setViewMode] = useState('map'); // 'map' | 'list'
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedShop, setSelectedShop] = useState(null);
-  const [hasLocationPermission, setHasLocationPermission] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [userCoords, setUserCoords] = useState(null);
 
-  // Safely check foreground location permissions on mount without throwing SecurityException
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status === 'granted') {
-          setHasLocationPermission(true);
-        }
-      } catch (err) {
-        // Safe fallback
-      }
-    })();
-  }, []);
-
+  // Filter valid shops with coordinates
   const shopsWithCoords = useMemo(() => {
-    return shops.filter((shop) => {
+    return (shops || []).filter((shop) => {
       const coords = shop.location?.coordinates;
       const hasValidCoords =
         Array.isArray(coords) &&
@@ -75,6 +105,50 @@ export default function MapScreen() {
     });
   }, [shops, selectedCategory]);
 
+  // Request location permission safely
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (pos?.coords) {
+            setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          }
+        }
+      } catch (err) {
+        // Non-blocking location check
+      }
+    })();
+  }, []);
+
+  // Update markers whenever shops or selectedShop changes
+  useEffect(() => {
+    if (!isMapReady || !webViewRef.current) return;
+    const markersData = shopsWithCoords.map((s) => {
+      const [lng, lat] = s.location.coordinates;
+      return {
+        id: String(s._id),
+        lat,
+        lng,
+        name: s.name?.[lang] || s.name?.uz || s.name?.ru || s.name?.en || 'Shop',
+        emoji: getCategoryEmoji(s.category),
+        isSelected: selectedShop?._id === s._id,
+      };
+    });
+    const js = `window.__renderMarkers(${JSON.stringify(markersData)});`;
+    webViewRef.current.injectJavaScript(js);
+  }, [shopsWithCoords, selectedShop, isMapReady, lang]);
+
+  // Push user location if found
+  useEffect(() => {
+    if (!isMapReady || !webViewRef.current || !userCoords) return;
+    const js = `window.__setUserLocation(${userCoords.lat}, ${userCoords.lng});`;
+    webViewRef.current.injectJavaScript(js);
+  }, [userCoords, isMapReady]);
+
   const locateMe = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -82,23 +156,31 @@ export default function MapScreen() {
         showToast('Location permission denied', 'error');
         return;
       }
-      setHasLocationPermission(true);
       const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
       });
-      mapRef.current?.animateToRegion(
-        {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          latitudeDelta: 0.03,
-          longitudeDelta: 0.03,
-        },
-        600
-      );
+      if (pos?.coords) {
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript(
+            `window.__focusLocation(${pos.coords.latitude}, ${pos.coords.longitude}, 15);`
+          );
+        }
+        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+      }
     } catch {
       showToast('Unable to get current location', 'error');
     }
   };
+
+  const focusShop = useCallback((shop) => {
+    if (!shop?.location?.coordinates) return;
+    setSelectedShop(shop);
+    const [lng, lat] = shop.location.coordinates;
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`window.__focusLocation(${lat}, ${lng}, 16, '${shop._id}');`);
+    }
+  }, []);
 
   const openDirections = (shop) => {
     if (!shop?.location?.coordinates) return;
@@ -116,19 +198,134 @@ export default function MapScreen() {
     });
   };
 
-  const focusShop = (shop) => {
-    setSelectedShop(shop);
-    const [lng, lat] = shop.location.coordinates;
-    mapRef.current?.animateToRegion(
-      {
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      },
-      500
-    );
-  };
+  const handleMessage = useCallback((event) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data);
+      if (payload.type === 'MAP_READY') {
+        setIsMapReady(true);
+      } else if (payload.type === 'SELECT_SHOP') {
+        const found = shops.find((s) => String(s._id) === String(payload.shopId));
+        if (found) {
+          if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+          setSelectedShop(found);
+        }
+      }
+    } catch (e) {
+      // Ignore invalid payload
+    }
+  }, [shops]);
+
+  // Self-contained Dark-Mode Leaflet Map HTML
+  const mapHtml = useMemo(() => {
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body, #map { width: 100%; height: 100%; background: #0A0A0C; overflow: hidden; }
+    .shop-pin {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #141419;
+      border: 2px solid #D4AF5A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .shop-pin:active { transform: scale(0.92); }
+    .shop-pin.active {
+      border: 3px solid #F0C96D;
+      background: #D4AF5A;
+      transform: scale(1.22);
+      box-shadow: 0 0 18px rgba(212, 175, 90, 0.85);
+    }
+    .user-radar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #2AABEE;
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 0 10px #2AABEE;
+    }
+    .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map', {
+      center: [${DEFAULT_CENTER.lat}, ${DEFAULT_CENTER.lng}],
+      zoom: ${DEFAULT_CENTER.zoom},
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    // Dark Matter tiles for seamless luxury dark theme
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd'
+    }).addTo(map);
+
+    var markersLayer = L.layerGroup().addTo(map);
+    var userMarker = null;
+
+    window.__renderMarkers = function(markers) {
+      markersLayer.clearLayers();
+      markers.forEach(function(m) {
+        var iconHtml = '<div class="shop-pin ' + (m.isSelected ? 'active' : '') + '">' + m.emoji + '</div>';
+        var customIcon = L.divIcon({
+          html: iconHtml,
+          className: '',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        });
+        var marker = L.marker([m.lat, m.lng], { icon: customIcon });
+        marker.on('click', function() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_SHOP', shopId: m.id }));
+          }
+        });
+        markersLayer.addLayer(marker);
+      });
+    };
+
+    window.__focusLocation = function(lat, lng, zoom, shopId) {
+      map.flyTo([lat, lng], zoom || 15, { animate: true, duration: 0.8 });
+    };
+
+    window.__setUserLocation = function(lat, lng) {
+      if (!userMarker) {
+        var userIcon = L.divIcon({
+          html: '<div class="user-radar"></div>',
+          className: '',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+      } else {
+        userMarker.setLatLng([lat, lng]);
+      }
+    };
+
+    // Notify React Native that Leaflet map is fully initialized
+    setTimeout(function() {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
+      }
+    }, 200);
+  </script>
+</body>
+</html>`;
+  }, []);
 
   return (
     <View style={[styles.container, isTablet && styles.tabletSplitContainer]}>
@@ -172,43 +369,22 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Main View: Interactive Map or List Fallback */}
+      {/* Main View: Interactive WebView Map or Native Scrollable List */}
       <View style={styles.mapArea}>
         {viewMode === 'map' ? (
-          <MapView
-            ref={mapRef}
+          <WebView
+            ref={webViewRef}
+            source={{ html: mapHtml }}
             style={StyleSheet.absoluteFillObject}
-            initialRegion={DEFAULT_REGION}
-            showsUserLocation={hasLocationPermission}
-            showsMyLocationButton={false}
-            userInterfaceStyle="dark"
-          >
-            <UrlTile
-              urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              maximumZ={19}
-              flipY={false}
-            />
-            {shopsWithCoords.map((shop) => {
-              const [lng, lat] = shop.location.coordinates;
-              const name =
-                shop.name?.[lang] ||
-                shop.name?.uz ||
-                shop.name?.ru ||
-                shop.name?.en ||
-                'Barbershop';
-              return (
-                <Marker
-                  key={shop._id}
-                  coordinate={{ latitude: lat, longitude: lng }}
-                  title={name}
-                  pinColor={
-                    selectedShop?._id === shop._id ? COLORS.accent : COLORS.telegram
-                  }
-                  onPress={() => setSelectedShop(shop)}
-                />
-              );
-            })}
-          </MapView>
+            onMessage={handleMessage}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            scrollEnabled={false}
+            bounces={false}
+            overScrollMode="never"
+            originWhitelist={['*']}
+            containerStyle={{ backgroundColor: COLORS.bg }}
+          />
         ) : (
           <ScrollView
             style={styles.listViewContainer}
@@ -287,8 +463,8 @@ export default function MapScreen() {
         )}
 
         {/* Floating Top Header: Category Filters & Mode Toggle */}
-        <View style={styles.topOverlay}>
-          <View style={styles.topRow}>
+        <View style={styles.topOverlay} pointerEvents="box-none">
+          <View style={styles.topRow} pointerEvents="box-none">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -299,7 +475,10 @@ export default function MapScreen() {
                 return (
                   <Pressable
                     key={cat}
-                    onPress={() => setSelectedCategory(cat)}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                      setSelectedCategory(cat);
+                    }}
                     style={[styles.filterPill, active && styles.filterPillActive]}
                   >
                     <Text
@@ -338,7 +517,7 @@ export default function MapScreen() {
         {/* Locate Me Floating Action Button (only in map mode) */}
         {viewMode === 'map' && (
           <Pressable onPress={locateMe} style={styles.locateBtn}>
-            <Ionicons name="navigate" size={20} color="#000" />
+            <Ionicons name="navigate" size={20} color="#0A0A0C" />
           </Pressable>
         )}
 
@@ -404,6 +583,14 @@ export default function MapScreen() {
   );
 }
 
+export default function MapScreen() {
+  return (
+    <MapErrorBoundary>
+      <MapScreenContent />
+    </MapErrorBoundary>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -458,6 +645,7 @@ const styles = StyleSheet.create({
   mapArea: {
     flex: 1,
     position: 'relative',
+    backgroundColor: '#0A0A0C',
   },
   topOverlay: {
     position: 'absolute',
@@ -480,10 +668,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 20,
-    elevation: 4,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 4,
   },
   modeToggleText: {
@@ -603,7 +791,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterPillTextActive: {
-    color: '#000',
+    color: '#0A0A0C',
     fontWeight: '700',
   },
   locateBtn: {
@@ -683,11 +871,41 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   bookNowBtnText: {
-    color: '#000',
+    color: '#0A0A0C',
     fontSize: 12,
     fontWeight: '700',
   },
   closePreviewBtn: {
     padding: 4,
+  },
+  errorFallbackContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorFallbackTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  errorFallbackSub: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  errorRetryBtn: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  errorRetryText: {
+    color: '#0A0A0C',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

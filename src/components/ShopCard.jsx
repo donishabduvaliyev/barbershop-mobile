@@ -115,7 +115,7 @@ export const ShopCard = ({ shop, index = 0, style }) => {
 
           {!!shopAddress && (
             <View style={styles.addressRow}>
-              <Ionicons name="location-sharp" size={13} color={COLORS.textMuted} />
+              <Ionicons name="location-sharp" size={13} color="#D4AF5A" />
               <Text style={styles.address} numberOfLines={1}>
                 {shopAddress}
               </Text>

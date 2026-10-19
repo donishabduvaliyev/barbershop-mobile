@@ -412,10 +412,10 @@ export default function ProfileScreen() {
             style={[styles.menuItem, styles.rowBorder]}
           >
             <View style={styles.menuItemLeft}>
-              <Ionicons name="person-circle-outline" size={24} color="#9C9CA6" />
+              <Ionicons name="person-circle-outline" size={24} color={COLORS.accent} />
               <Text style={styles.menuItemLabel}>{t('MyDetails', 'My Details')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64646D" />
+            <Ionicons name="chevron-forward" size={18} color="#9C9CA6" />
           </Pressable>
 
           {/* 2. Booking History */}
@@ -428,10 +428,10 @@ export default function ProfileScreen() {
             style={[styles.menuItem, styles.rowBorder]}
           >
             <View style={styles.menuItemLeft}>
-              <Ionicons name="time-outline" size={24} color="#9C9CA6" />
+              <Ionicons name="time-outline" size={24} color={COLORS.accent} />
               <Text style={styles.menuItemLabel}>{t('BookingHistory', 'Booking History')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64646D" />
+            <Ionicons name="chevron-forward" size={18} color="#9C9CA6" />
           </Pressable>
 
           {/* 3. Favorites */}
@@ -444,10 +444,10 @@ export default function ProfileScreen() {
             style={styles.menuItem}
           >
             <View style={styles.menuItemLeft}>
-              <Ionicons name="heart-outline" size={24} color="#9C9CA6" />
+              <Ionicons name="heart-outline" size={24} color={COLORS.accent} />
               <Text style={styles.menuItemLabel}>{t('Favorites', 'Saved Places')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#64646D" />
+            <Ionicons name="chevron-forward" size={18} color="#9C9CA6" />
           </Pressable>
         </View>
 

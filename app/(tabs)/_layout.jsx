@@ -54,7 +54,7 @@ function CustomBottomNav({ state, descriptors, navigation }) {
                 <Ionicons
                   name={iconName}
                   size={24}
-                  color={isFocused ? '#D4AF5A' : '#A1A1AA'}
+                  color={isFocused ? '#F0C96D' : '#D4D4D8'}
                 />
               </View>
               {/* Active gold dot matching web Navbar.jsx */}
