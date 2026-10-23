@@ -217,9 +217,13 @@ function MapScreenContent() {
 
   // Self-contained Dark-Mode Leaflet Map HTML
   const mapHtml = useMemo(() => {
-    const cartoKey = process.env.EXPO_PUBLIC_CARTO_API_KEY || 'cb1_4svh_1_148b6eef82b39fbd2cd85f4b';
-    const tileUrl = `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`;
-    const tileFilter = '';
+    const cartoKey = process.env.EXPO_PUBLIC_CARTO_API_KEY || '';
+    const tileUrl = cartoKey
+      ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tileFilter = cartoKey
+      ? ''
+      : '.leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%); }';
 
     return `<!DOCTYPE html>
 <html>
