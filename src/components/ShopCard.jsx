@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, SPRING_PRESETS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -46,11 +46,12 @@ export const ShopCard = ({ shop, index = 0, style }) => {
       style={[styles.wrapper, style]}
     >
       <AnimatedPressable
+        delayPressIn={40}
         onPressIn={() => {
-          scale.value = withSpring(0.978, { damping: 18, stiffness: 280 });
+          scale.value = withSpring(0.975, SPRING_PRESETS.cardPress);
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, { damping: 18, stiffness: 280 });
+          scale.value = withSpring(1, SPRING_PRESETS.cardPress);
         }}
         onPress={handlePress}
         style={[styles.card, animatedCardStyle]}

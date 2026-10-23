@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, SPRING_PRESETS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -36,12 +36,12 @@ export const CatalogCard = ({ shop, style }) => {
 
   return (
     <AnimatedPressable
-      delayPressIn={60}
+      delayPressIn={40}
       onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 18, stiffness: 300 });
+        scale.value = withSpring(0.975, SPRING_PRESETS.cardPress);
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 18, stiffness: 300 });
+        scale.value = withSpring(1, SPRING_PRESETS.cardPress);
       }}
       onPress={handlePress}
       style={[styles.card, animStyle, style]}
@@ -84,8 +84,8 @@ export const CatalogCard = ({ shop, style }) => {
           <Text style={styles.nameText} numberOfLines={1}>
             {shopName}
           </Text>
-          <View style={styles.ratingRow}>
-            <Text style={styles.starEmoji}>⭐</Text>
+          <View style={styles.ratingBadge}>
+            <Ionicons name="star" size={11} color={COLORS.warning} />
             <Text style={styles.ratingText}>
               {Number(shop.rating || 5.0).toFixed(1)}
             </Text>
@@ -105,20 +105,20 @@ const styles = StyleSheet.create({
   card: {
     width: 155,
     backgroundColor: '#131317', // var(--color-surface)
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#27272E', // var(--color-border-soft)
     marginRight: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   imageWrap: {
     width: '100%',
-    height: 100, // h-24
+    height: 104,
     backgroundColor: '#1A1A1F',
     position: 'relative',
   },
@@ -152,20 +152,22 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     fontWeight: '600',
-    marginBottom: 3,
+    marginBottom: 4,
   },
-  ratingRow: {
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-  },
-  starEmoji: {
-    fontSize: 11,
+    backgroundColor: 'rgba(240, 184, 76, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   ratingText: {
     color: '#F0B84C', // var(--color-warning)
     fontFamily: FONTS.bodyBold,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
   },
   arrowBtn: {

@@ -52,3 +52,12 @@ export const FONTS = {
   bold: 'Inter-700',
   extraBold: 'Inter-800',
 };
+
+// Emil Kowalski Motion & Spring Presets for React Native Reanimated
+export const SPRING_PRESETS = {
+  buttonPress: { damping: 18, stiffness: 320, mass: 0.8 },
+  cardPress: { damping: 20, stiffness: 280, mass: 1 },
+  modalEnter: { damping: 22, stiffness: 240, mass: 1 },
+  tabSwitch: { damping: 24, stiffness: 300, mass: 0.9 },
+};
+

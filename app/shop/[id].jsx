@@ -286,13 +286,16 @@ export default function ShopDetailScreen() {
       <View style={styles.bottomBar}>
         <Pressable
           onPress={() => {
-            if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+            if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             router.push(`/booking/${shop._id}`);
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={styles.bookCtaBtn}
+          style={({ pressed }) => [
+            styles.bookCtaBtn,
+            pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
+          ]}
         >
-          <Text style={styles.bookCtaText}>{t('BookNow')}</Text>
+          <Text style={styles.bookCtaText}>✂️  {t('BookNow')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -531,15 +534,21 @@ const styles = StyleSheet.create({
   },
   bookCtaBtn: {
     backgroundColor: COLORS.accent,
-    height: 50,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
   },
   bookCtaText: {
     color: COLORS.bg,
     fontFamily: FONTS.bodyBold,
     fontSize: 15,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

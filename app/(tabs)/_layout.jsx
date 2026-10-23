@@ -18,7 +18,7 @@ function CustomBottomNav({ state, descriptors, navigation }) {
 
           const onPress = () => {
             if (Platform.OS !== 'web') {
-              Haptics.selectionAsync().catch(() => {});
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             }
             const event = navigation.emit({
               type: 'tabPress',
@@ -54,10 +54,10 @@ function CustomBottomNav({ state, descriptors, navigation }) {
                 <Ionicons
                   name={iconName}
                   size={24}
-                  color={isFocused ? '#F0C96D' : '#D4D4D8'}
+                  color={isFocused ? '#D4AF5A' : '#9C9CA6'}
                 />
               </View>
-              {/* Active gold dot matching web Navbar.jsx */}
+              {/* Active gold dot with glow matching web Navbar.jsx */}
               <View
                 style={[
                   styles.activeDot,
@@ -165,6 +165,11 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#D4AF5A', // var(--color-accent)
+    shadowColor: '#D4AF5A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.9,
+    shadowRadius: 3,
+    elevation: 2,
     marginTop: 3,
   },
   ownerReturnBanner: {

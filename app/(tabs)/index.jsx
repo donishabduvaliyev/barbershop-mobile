@@ -449,6 +449,13 @@ const styles = StyleSheet.create({
   },
   categoryPillActive: {
     backgroundColor: '#D4AF5A',
+    borderWidth: 1,
+    borderColor: '#E2C176',
+    shadowColor: '#D4AF5A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
   },
   categoryPillInactive: {
     backgroundColor: '#1A1A1F',
