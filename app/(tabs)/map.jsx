@@ -217,6 +217,14 @@ function MapScreenContent() {
 
   // Self-contained Dark-Mode Leaflet Map HTML
   const mapHtml = useMemo(() => {
+    const cartoKey = process.env.EXPO_PUBLIC_CARTO_API_KEY || '';
+    const tileUrl = cartoKey
+      ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tileFilter = cartoKey
+      ? ''
+      : '.leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%); }';
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -227,6 +235,7 @@ function MapScreenContent() {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body, #map { width: 100%; height: 100%; background: #0A0A0C; overflow: hidden; }
+    ${tileFilter}
     .shop-pin {
       width: 40px;
       height: 40px;
@@ -269,10 +278,10 @@ function MapScreenContent() {
       attributionControl: false
     });
 
-    // Dark Matter tiles for seamless luxury dark theme
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Dark tiles without API key requirements (or CARTO when key is provided)
+    L.tileLayer('${tileUrl}', {
       maxZoom: 19,
-      subdomains: 'abcd'
+      subdomains: '${cartoKey ? "abcd" : "abc"}'
     }).addTo(map);
 
     var markersLayer = L.layerGroup().addTo(map);
