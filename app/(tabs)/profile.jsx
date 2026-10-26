@@ -121,16 +121,32 @@ export default function ProfileScreen() {
 
           <View style={styles.cardGroup}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{t('Name', 'Name')}</Text>
+              <Text style={styles.detailLabel}>{t('FullName', 'Full Name')}</Text>
               <Text style={styles.detailValue}>{userInfo?.name || 'Guest'}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{t('Phone Number', 'Phone Number')}</Text>
+              <Text style={styles.detailLabel}>{t('PhoneNumber', 'Phone Number')}</Text>
               <Text style={styles.detailValue}>{userInfo?.phone || t('NoPhone', 'No phone')}</Text>
             </View>
-            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('TelegramUsername', 'Telegram Username')}</Text>
+              <Text style={[styles.detailValue, { color: '#D4AF5A' }]}>
+                {userInfo?.username ? `@${userInfo.username}` : t('NoUsername', 'None')}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>{t('TelegramID', 'Telegram ID')}</Text>
               <Text style={styles.detailValue}>{userInfo?.telegramId || '—'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('TotalVisits', 'Total Visits')}</Text>
+              <Text style={styles.detailValue}>{bookings?.length || 0}</Text>
+            </View>
+            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailLabel}>{t('Completed', 'Completed Visits')}</Text>
+              <Text style={[styles.detailValue, { color: '#3DDC97' }]}>
+                {(bookings || []).filter((b) => b.status === 'completed').length}
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -179,18 +195,19 @@ export default function ProfileScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.bookingShopName}>{resolveText(booking.shopName, lang)}</Text>
                       <Text style={styles.bookingDate}>
-                        {new Date(booking.requestedTime).toLocaleString()}
+                        📅 {new Date(booking.requestedTime).toLocaleString()}
                       </Text>
-                      {booking.serviceName && (
+                      <Text style={styles.bookingMeta}>
+                        ✂️ {t('Service', 'Service')}: <Text style={{ color: '#F3F4F6', fontWeight: '600' }}>{resolveText(booking.serviceName, lang) || t('StandardService', 'Service')}</Text>
+                      </Text>
+                      <Text style={styles.bookingMeta}>
+                        💈 {t('Barber', 'Barber')}: <Text style={{ color: '#F3F4F6', fontWeight: '600' }}>{resolveText(booking.staffName, lang) || t('AnyBarber', 'Any Available')}</Text>
+                      </Text>
+                      {booking.price ? (
                         <Text style={styles.bookingMeta}>
-                          ✂️ {resolveText(booking.serviceName, lang)}
+                          💰 {t('Price', 'Price')}: <Text style={{ color: '#D4AF5A', fontWeight: '700' }}>{booking.price.toLocaleString()} UZS</Text>
                         </Text>
-                      )}
-                      {booking.staffName && (
-                        <Text style={styles.bookingMeta}>
-                          💈 {resolveText(booking.staffName, lang)}
-                        </Text>
-                      )}
+                      ) : null}
                     </View>
 
                     <View style={styles.bookingRightCol}>
@@ -336,6 +353,29 @@ export default function ProfileScreen() {
             <Text style={styles.userPhoneText}>
               {userInfo.phone || t('NoPhone', 'No phone number')}
             </Text>
+            {userInfo.username && (
+              <Text style={{ color: '#D4AF5A', fontSize: 12, marginTop: 2 }}>
+                @{userInfo.username}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Quick Summary KPIs */}
+        <View style={styles.kpiRow}>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>{t('TotalVisits', 'Visits')}</Text>
+            <Text style={styles.kpiVal}>{bookings?.length || 0}</Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>{t('Completed', 'Done')}</Text>
+            <Text style={[styles.kpiVal, { color: '#3DDC97' }]}>
+              {(bookings || []).filter((b) => b.status === 'completed').length}
+            </Text>
+          </View>
+          <View style={styles.kpiBox}>
+            <Text style={styles.kpiLabel}>{t('Favorites', 'Saved')}</Text>
+            <Text style={[styles.kpiVal, { color: '#D4AF5A' }]}>{favoriteShops.length}</Text>
           </View>
         </View>
 
@@ -835,5 +875,34 @@ const styles = StyleSheet.create({
     color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
     fontSize: 13,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  kpiBox: {
+    flex: 1,
+    backgroundColor: '#131317',
+    borderWidth: 1,
+    borderColor: '#27272E',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kpiLabel: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  kpiVal: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 17,
+    fontWeight: '700',
   },
 });
