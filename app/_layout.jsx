@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/i18n';
@@ -73,7 +74,10 @@ function AppShell({ fontsLoaded }) {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts(MOTION_ASSETS.fonts);
+  const [fontsLoaded, fontError] = useFonts({
+    ...MOTION_ASSETS.fonts,
+    ...Ionicons.font,
+  });
 
   return (
     <GestureHandlerRootView style={styles.root}>

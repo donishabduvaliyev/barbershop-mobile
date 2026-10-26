@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS, SPRING_PRESETS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
+import { normalizeShopImageUrl, DEFAULT_SHOP_IMAGES } from '../utils/imageUtils';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -60,9 +61,7 @@ export const ShopCard = ({ shop, index = 0, style }) => {
         <View style={styles.imageContainer}>
           <Image
             source={{
-              uri:
-                shop.image ||
-                'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&q=80',
+              uri: normalizeShopImageUrl(shop.image, shop.category),
             }}
             style={styles.image}
             resizeMode="cover"

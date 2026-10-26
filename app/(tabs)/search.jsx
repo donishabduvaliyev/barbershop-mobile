@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { SearchSkeleton } from '../../src/components/Skeletons';
+import { normalizeShopImageUrl } from '../../src/utils/imageUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -314,9 +315,7 @@ const AvailableShopResultCard = ({ shop, lang, router, presetDate, presetHour })
       >
         <Image
           source={{
-            uri:
-              shop.image ||
-              'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&q=80',
+            uri: normalizeShopImageUrl(shop.image, shop.category),
           }}
           style={resultCardStyles.image}
         />
@@ -440,9 +439,7 @@ const AdCarousel = ({ services, lang, router }) => {
             >
               <Image
                 source={{
-                  uri:
-                    service.image ||
-                    'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80',
+                  uri: normalizeShopImageUrl(service.image, service.category),
                 }}
                 style={adStyles.image}
               />
@@ -508,9 +505,7 @@ const HorizontalCarousel = ({ title, services, lang, router, badge }) => {
               <View style={shelfStyles.imageWrap}>
                 <Image
                   source={{
-                    uri:
-                      service.image ||
-                      'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&q=80',
+                    uri: normalizeShopImageUrl(service.image, service.category),
                   }}
                   style={shelfStyles.cardImage}
                 />

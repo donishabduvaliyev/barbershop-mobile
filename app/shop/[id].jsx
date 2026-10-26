@@ -19,6 +19,7 @@ import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { MOTION_ASSETS } from '../../src/components/BrandAssets';
 import { ShopDetailSkeleton } from '../../src/components/Skeletons';
+import { normalizeShopImageUrl } from '../../src/utils/imageUtils';
 
 const normParam = (v) => (Array.isArray(v) ? v[0] : v);
 
@@ -94,9 +95,7 @@ export default function ShopDetailScreen() {
         <View style={[styles.heroBox, isTablet && { height: 320 }]}>
           <Image
             source={{
-              uri:
-                shop.image ||
-                'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&q=80',
+              uri: normalizeShopImageUrl(shop.image, shop.category),
             }}
             style={styles.heroImage}
           />

@@ -38,7 +38,8 @@ export const LanguageActionSheet = () => {
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         accessibilityLabel="Open language selector"
       >
-        <Ionicons name="language-outline" size={20} color={COLORS.textMuted} />
+        <Ionicons name="language-outline" size={17} color="#D4AF5A" />
+        <Text style={styles.triggerLangText}>{(i18n.language || 'uz').slice(0, 2).toUpperCase()}</Text>
       </Pressable>
 
       {/* Action Sheet Bottom Modal (matching languageDropdown.jsx) */}
@@ -92,14 +93,23 @@ export const LanguageActionSheet = () => {
 
 const styles = StyleSheet.create({
   triggerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#1A1A1F', // var(--color-surface-2)
     borderWidth: 1,
     borderColor: '#27272E',
-    alignItems: 'center',
     justifyContent: 'center',
+  },
+  triggerLangText: {
+    fontFamily: FONTS.bodyBold,
+    fontWeight: '700',
+    fontSize: 11,
+    color: '#D4AF5A',
+    letterSpacing: 0.5,
   },
   backdrop: {
     flex: 1,

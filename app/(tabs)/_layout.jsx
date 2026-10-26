@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +10,15 @@ import { useAppContext } from '../../src/context/AppContext';
 
 // Floating pill navigation bar mirroring barbershop-main/src/components/Navbar.jsx
 function CustomBottomNav({ state, descriptors, navigation }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.floatingNavContainer} pointerEvents="box-none">
+    <View
+      style={[
+        styles.floatingNavContainer,
+        { bottom: Math.max(insets.bottom, 12) + (Platform.OS === 'ios' ? 8 : 4) },
+      ]}
+      pointerEvents="box-none"
+    >
       <View style={styles.floatingNavPill}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -74,6 +82,7 @@ function CustomBottomNav({ state, descriptors, navigation }) {
 
 export default function TabsLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { adminData, isCustomerPreview, setIsCustomerPreview } = useAppContext();
 
@@ -88,7 +97,7 @@ export default function TabsLayout() {
             setIsCustomerPreview(false);
             router.replace('/admin');
           }}
-          style={styles.ownerReturnBanner}
+          style={[styles.ownerReturnBanner, { top: Math.max(insets.top, 16) + 8 }]}
         >
           <Ionicons name="shield-checkmark" size={16} color="#0A0A0C" style={{ marginRight: 6 }} />
           <Text style={styles.ownerReturnBannerText}>{t('BackToAdmin', 'Back to Dashboard')}</Text>
