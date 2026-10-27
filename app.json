@@ -37,7 +37,22 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Ionicons.ttf",
+            "./assets/fonts/Fraunces-500.ttf",
+            "./assets/fonts/Fraunces-600.ttf",
+            "./assets/fonts/Fraunces-700.ttf",
+            "./assets/fonts/Inter-400.ttf",
+            "./assets/fonts/Inter-500.ttf",
+            "./assets/fonts/Inter-600.ttf",
+            "./assets/fonts/Inter-700.ttf",
+            "./assets/fonts/Inter-800.ttf"
+          ]
+        }
+      ],
       [
         "expo-location",
         {

@@ -1,12 +1,64 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Font from 'expo-font';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
+import { MOTION_ASSETS } from '../../src/components/BrandAssets';
+
+// Fail-safe Tab Icon: renders crisp Ionicons when font is loaded,
+// but automatically falls back to bundled PNG image with matching tint
+// so the navbar can NEVER be blank in any APK build.
+function NavTabIcon({ routeName, isFocused }) {
+  const [fontLoaded, setFontLoaded] = useState(() => Font.isLoaded('ionicons'));
+
+  useEffect(() => {
+    if (!fontLoaded) {
+      if (Font.isLoaded('ionicons')) {
+        setFontLoaded(true);
+      } else {
+        Font.loadAsync(Ionicons.font)
+          .then(() => setFontLoaded(true))
+          .catch(() => {});
+      }
+    }
+  }, [fontLoaded]);
+
+  let iconName = 'home-outline';
+  let fallbackImg = MOTION_ASSETS.icons.home;
+
+  if (routeName === 'index') {
+    iconName = isFocused ? 'home' : 'home-outline';
+    fallbackImg = MOTION_ASSETS.icons.home;
+  } else if (routeName === 'search') {
+    iconName = isFocused ? 'search' : 'search-outline';
+    fallbackImg = MOTION_ASSETS.icons.search;
+  } else if (routeName === 'map') {
+    iconName = isFocused ? 'map' : 'map-outline';
+    fallbackImg = MOTION_ASSETS.icons.mapPin;
+  } else if (routeName === 'profile') {
+    iconName = isFocused ? 'person' : 'person-outline';
+    fallbackImg = MOTION_ASSETS.icons.users;
+  }
+
+  const iconColor = isFocused ? '#D4AF5A' : '#9C9CA6';
+
+  if (fontLoaded) {
+    return <Ionicons name={iconName} size={24} color={iconColor} />;
+  }
+
+  return (
+    <Image
+      source={fallbackImg}
+      style={{ width: 22, height: 22, tintColor: iconColor }}
+      resizeMode="contain"
+    />
+  );
+}
 
 // Floating pill navigation bar mirroring barbershop-main/src/components/Navbar.jsx
 function CustomBottomNav({ state, descriptors, navigation }) {
@@ -21,7 +73,6 @@ function CustomBottomNav({ state, descriptors, navigation }) {
     >
       <View style={styles.floatingNavPill}>
         {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
           const isFocused = state.index === index;
 
           const onPress = () => {
@@ -39,17 +90,6 @@ function CustomBottomNav({ state, descriptors, navigation }) {
             }
           };
 
-          let iconName = 'home-outline';
-          if (route.name === 'index') {
-            iconName = isFocused ? 'home' : 'home-outline';
-          } else if (route.name === 'search') {
-            iconName = isFocused ? 'search' : 'search-outline';
-          } else if (route.name === 'map') {
-            iconName = isFocused ? 'map' : 'map-outline';
-          } else if (route.name === 'profile') {
-            iconName = isFocused ? 'person' : 'person-outline';
-          }
-
           return (
             <Pressable
               key={route.key}
@@ -59,11 +99,7 @@ function CustomBottomNav({ state, descriptors, navigation }) {
               android_ripple={{ color: 'rgba(212, 175, 90, 0.15)', borderless: true, radius: 28 }}
             >
               <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>
-                <Ionicons
-                  name={iconName}
-                  size={24}
-                  color={isFocused ? '#D4AF5A' : '#9C9CA6'}
-                />
+                <NavTabIcon routeName={route.name} isFocused={isFocused} />
               </View>
               {/* Active gold dot with glow matching web Navbar.jsx */}
               <View
@@ -164,7 +200,8 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    transitionDuration: '200ms',
+    width: 32,
+    height: 32,
   },
   iconWrapActive: {
     transform: [{ scale: 1.08 }],

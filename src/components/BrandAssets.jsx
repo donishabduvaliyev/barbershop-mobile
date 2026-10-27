@@ -48,6 +48,8 @@ export const MOTION_ASSETS = {
     badgeDone: require('../../assets/png/components/badge-done.png'),
   },
   fonts: {
+    ionicons: require('../../assets/fonts/Ionicons.ttf'),
+    Ionicons: require('../../assets/fonts/Ionicons.ttf'),
     'Fraunces-500': require('../../assets/fonts/Fraunces-500.ttf'),
     'Fraunces-600': require('../../assets/fonts/Fraunces-600.ttf'),
     'Fraunces-700': require('../../assets/fonts/Fraunces-700.ttf'),
