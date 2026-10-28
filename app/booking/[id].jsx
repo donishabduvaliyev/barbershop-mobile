@@ -24,16 +24,18 @@ import { BookingSheetSkeleton } from '../../src/components/Skeletons';
 const ITEM_HEIGHT = 44;
 
 // iPhone wheel carousel time picker matching ScrollPickerColumn in barbershop-main Booking.jsx
+// Uses native ScrollView to avoid VirtualizedLists inside ScrollView warning
 const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
   const scrollRef = useRef(null);
   const isUserInteracting = useRef(false);
+  const PADDING_SPACER = (190 - ITEM_HEIGHT) / 2; // 73px centers item in 190px container
 
   useEffect(() => {
     if (!isUserInteracting.current && scrollRef.current && selectedValue) {
       const idx = items.indexOf(selectedValue);
       if (idx !== -1) {
-        scrollRef.current.scrollToOffset({
-          offset: idx * ITEM_HEIGHT,
+        scrollRef.current.scrollTo({
+          y: idx * ITEM_HEIGHT,
           animated: false,
         });
       }
@@ -61,37 +63,28 @@ const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
       {/* Selection Lens matching web bg-surface-3/70 rounded-lg */}
       <View style={pickerStyles.lens} pointerEvents="none" />
 
-      <FlatList
+      <ScrollView
         ref={scrollRef}
-        data={items}
-        keyExtractor={(item) => item}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         bounces={false}
         nestedScrollEnabled={true}
-        initialNumToRender={15}
-        maxToRenderPerBatch={15}
-        windowSize={5}
-        getItemLayout={(_, index) => ({
-          length: ITEM_HEIGHT,
-          offset: ITEM_HEIGHT * index,
-          index,
-        })}
         onScrollBeginDrag={handleScrollBegin}
         onMomentumScrollEnd={handleMomentumEnd}
-        ListHeaderComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
-        ListFooterComponent={<View style={{ height: ITEM_HEIGHT * 1.5 }} />}
-        renderItem={({ item, index }) => {
+        contentContainerStyle={{ paddingTop: PADDING_SPACER, paddingBottom: PADDING_SPACER }}
+      >
+        {items.map((item, index) => {
           const isSelected = item === selectedValue;
           return (
             <Pressable
+              key={item}
               onPress={() => {
                 isUserInteracting.current = true;
                 if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
                 onSelect(item);
-                scrollRef.current?.scrollToOffset({
-                  offset: index * ITEM_HEIGHT,
+                scrollRef.current?.scrollTo({
+                  y: index * ITEM_HEIGHT,
                   animated: true,
                 });
                 setTimeout(() => {
@@ -111,8 +104,8 @@ const ScrollPickerColumn = ({ items, selectedValue, onSelect }) => {
               </Text>
             </Pressable>
           );
-        }}
-      />
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -1155,7 +1148,7 @@ const pickerStyles = StyleSheet.create({
     height: ITEM_HEIGHT,
     backgroundColor: '#27272F', // var(--color-surface-3)
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#D4AF5A',
     zIndex: 1,
   },
@@ -1172,8 +1165,8 @@ const pickerStyles = StyleSheet.create({
     opacity: 0.45,
   },
   itemTextSelected: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 21,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 22,
     fontWeight: '700',
     color: '#D4AF5A',
     opacity: 1,

@@ -7,8 +7,9 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -17,9 +18,9 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS } from '../../src/theme/colors';
 import { useAppContext } from '../../src/context/AppContext';
 import { useResponsive } from '../../src/hooks/useResponsive';
-import { MOTION_ASSETS } from '../../src/components/BrandAssets';
 import { ShopDetailSkeleton } from '../../src/components/Skeletons';
 import { normalizeShopImageUrl } from '../../src/utils/imageUtils';
+import { HeartIcon } from '../../src/components/HeartIcon';
 
 const normParam = (v) => (Array.isArray(v) ? v[0] : v);
 
@@ -27,6 +28,7 @@ export default function ShopDetailScreen() {
   const params = useLocalSearchParams();
   const id = normParam(params.id);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const { backEndUrl, favoriteIds, toggleFavorite } = useAppContext();
@@ -37,22 +39,26 @@ export default function ShopDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
     (async () => {
       try {
         setIsLoading(true);
         const res = await fetch(`${backEndUrl}/api/mobile/shops/shops/${id}`)
           .then((r) => (r.ok ? r : fetch(`${backEndUrl}/api/shops/shops/${id}`)))
           .catch(() => fetch(`${backEndUrl}/api/shops/shops/${id}`));
-        if (res && res.ok) {
+        if (res && res.ok && isMounted) {
           const data = await res.json();
           setShop(data);
         }
       } catch (err) {
         console.warn('Error loading shop details:', err.message);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     })();
+    return () => {
+      isMounted = false;
+    };
   }, [id, backEndUrl]);
 
   if (isLoading) {
@@ -68,11 +74,12 @@ export default function ShopDetailScreen() {
       <SafeAreaView style={styles.loaderContainer}>
         <Pressable
           onPress={() => router.back()}
-          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          hitSlop={14}
           style={styles.circleBtn}
         >
           <Ionicons name="arrow-back" size={22} color="#FFF" />
         </Pressable>
+        <Text style={styles.notFoundText}>{t('not_found', 'Shop not found')}</Text>
       </SafeAreaView>
     );
   }
@@ -85,42 +92,69 @@ export default function ShopDetailScreen() {
   const shopDesc =
     shop.description?.[lang] || shop.description?.uz || shop.description?.ru || shop.description?.en || '';
 
+  const lat = shop.location?.coordinates?.[1] || 41.311081;
+  const lng = shop.location?.coordinates?.[0] || 69.240562;
+
+  const handleOpenMap = () => {
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const handleCall = () => {
+    if (shop.phone) {
+      Linking.openURL(`tel:${shop.phone}`).catch(() => {});
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <View style={styles.safeArea}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Cover */}
+        {/* Top Hero Image with Gradient Overlay & Back / Favorite Buttons */}
         <View style={[styles.heroBox, isTablet && { height: 320 }]}>
           <Image
             source={{
               uri: normalizeShopImageUrl(shop.image, shop.category),
             }}
             style={styles.heroImage}
+            resizeMode="cover"
           />
-          <View style={styles.heroTopActions}>
+          <View style={styles.heroOverlay} />
+
+          <View style={[styles.heroTopActions, { top: Math.max(insets.top, 16) + 8 }]}>
             <Pressable
-              onPress={() => router.back()}
-              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                router.back();
+              }}
+              hitSlop={12}
               style={styles.circleBtn}
             >
-              <Ionicons name="arrow-back" size={22} color="#FFF" />
+              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
             </Pressable>
+
             <Pressable
-              onPress={() => toggleFavorite(shop._id)}
-              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                }
+                toggleFavorite(shop._id);
+              }}
+              hitSlop={12}
               style={styles.circleBtn}
             >
-              <Ionicons
-                name={isFavorited ? 'heart' : 'heart-outline'}
-                size={22}
-                color={isFavorited ? COLORS.danger : '#FFF'}
+              <HeartIcon
+                filled={isFavorited}
+                size={18}
+                color={isFavorited ? COLORS.danger : '#FFFFFF'}
               />
             </Pressable>
           </View>
         </View>
 
+        {/* Floating Main Info Card (-mt-6 relative z-10) */}
         <View
           style={[
             styles.bodyContainer,
@@ -128,13 +162,19 @@ export default function ShopDetailScreen() {
             isTablet && styles.tabletColumns,
           ]}
         >
-          {/* Left / Main Column */}
           <View style={isTablet ? styles.tabletLeftCol : undefined}>
             <Animated.View entering={FadeInDown.duration(350)} style={styles.infoCard}>
               <View style={styles.titleRow}>
-                <Text style={styles.shopTitle}>{shopName}</Text>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.shopTitle}>{shopName}</Text>
+                  {!!shopDesc && (
+                    <Text style={styles.shopDescription}>{shopDesc}</Text>
+                  )}
+                </View>
+
+                {/* Rating Badge */}
                 <View style={styles.ratingPill}>
-                  <Ionicons name="star" size={13} color="#D4AF5A" />
+                  <Ionicons name="star" size={13} color="#F0B84C" />
                   <Text style={styles.ratingValue}>
                     {Number(shop.rating || 5.0).toFixed(1)}
                   </Text>
@@ -142,23 +182,33 @@ export default function ShopDetailScreen() {
                 </View>
               </View>
 
-              {!!shopDesc && (
-                <Text style={styles.shopDescription}>{shopDesc}</Text>
-              )}
+              {/* Meta Rows: Address, Working Hours, Phone */}
+              <View style={styles.metaDivider}>
+                {!!shopAddress && (
+                  <Pressable onPress={handleOpenMap} style={styles.metaRow}>
+                    <Ionicons name="location-sharp" size={15} color="#D4AF5A" />
+                    <Text style={[styles.metaText, styles.underlineText]} numberOfLines={1}>
+                      {shopAddress}
+                    </Text>
+                  </Pressable>
+                )}
 
-              {!!shopAddress && (
-                <View style={styles.metaRow}>
-                  <Ionicons name="location-sharp" size={16} color="#D4AF5A" />
-                  <Text style={styles.metaText}>{shopAddress}</Text>
-                </View>
-              )}
+                <View style={styles.metaRowBetween}>
+                  <View style={styles.metaRowInner}>
+                    <Ionicons name="time-outline" size={15} color="#D4AF5A" />
+                    <Text style={styles.metaText}>
+                      {shop.workingHours?.from || '09:00'} – {shop.workingHours?.to || '21:00'}
+                    </Text>
+                  </View>
 
-              {shop.phone && (
-                <View style={styles.metaRow}>
-                  <Ionicons name="call" size={15} color="#D4AF5A" />
-                  <Text style={styles.metaText}>{shop.phone}</Text>
+                  {shop.phone && (
+                    <Pressable onPress={handleCall} style={styles.metaRowInner}>
+                      <Ionicons name="call-outline" size={15} color="#D4AF5A" />
+                      <Text style={[styles.metaText, styles.phoneText]}>{shop.phone}</Text>
+                    </Pressable>
+                  )}
                 </View>
-              )}
+              </View>
             </Animated.View>
 
             {/* Services Section */}
@@ -167,178 +217,218 @@ export default function ShopDetailScreen() {
                 entering={FadeInDown.delay(80).duration(350)}
                 style={styles.sectionCard}
               >
-                <Text style={styles.sectionTitle}>{t('Services')}</Text>
-                {shop.services.map((service) => {
-                  const serviceName =
-                    service.name?.[lang] ||
-                    service.name?.uz ||
-                    service.name?.ru ||
-                    service.name?.en;
-                  return (
-                    <Pressable
-                      key={service._id}
-                      onPress={() =>
-                        router.push({
-                          pathname: `/booking/${shop._id}`,
-                          params: { presetServiceId: service._id },
-                        })
-                      }
-                      style={styles.serviceRow}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.serviceName}>{serviceName}</Text>
-                        <Text style={styles.serviceDuration}>
-                          ⏱ {service.durationMinutes || 60} {t('min')}
-                        </Text>
-                      </View>
-                      <View style={styles.servicePriceRight}>
-                        <Text style={styles.servicePrice}>
-                          {service.price?.toLocaleString()} {t('UZS')}
-                        </Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={16}
-                          color={COLORS.accent}
-                        />
-                      </View>
-                    </Pressable>
-                  );
-                })}
+                <Text style={styles.sectionTitle}>{t('Services', 'Services')}</Text>
+                <View style={styles.servicesList}>
+                  {shop.services.map((item, idx) => {
+                    const serviceName =
+                      item.name?.[lang] ||
+                      item.name?.uz ||
+                      item.name?.ru ||
+                      item.name?.en ||
+                      t('Service');
+                    const priceFormatted =
+                      item.price != null
+                        ? `${(item.price / 1000).toFixed(0)} 000 UZS`
+                        : '0 UZS';
+
+                    return (
+                      <Pressable
+                        key={item._id || idx}
+                        onPress={() => {
+                          if (Platform.OS !== 'web') {
+                            Haptics.selectionAsync().catch(() => {});
+                          }
+                          router.push({
+                            pathname: `/booking/${shop._id}`,
+                            params: { presetServiceId: item._id },
+                          });
+                        }}
+                        style={({ pressed }) => [
+                          styles.serviceCard,
+                          pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+                        ]}
+                      >
+                        <View style={{ flex: 1, marginRight: 10 }}>
+                          <Text style={styles.serviceName}>{serviceName}</Text>
+                          <Text style={styles.serviceDuration}>
+                            {t('Duration', 'Duration')}: {item.durationMinutes || 30} {t('minutes', 'min')}
+                          </Text>
+                        </View>
+                        <View style={styles.pricePill}>
+                          <Text style={styles.pricePillText}>{priceFormatted}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </Animated.View>
             )}
-          </View>
 
-          {/* Right Column on Tablet (or Stacked on Phone): Barbers & Working Hours */}
-          <View style={isTablet ? styles.tabletRightCol : undefined}>
-            {shop.staff?.length > 0 && (
+            {/* Gallery Section (Only shows if extra shop images exist) */}
+            {Array.isArray(shop.images) && shop.images.length > 0 && (
               <Animated.View
-                entering={FadeInDown.delay(140).duration(350)}
+                entering={FadeInDown.delay(120).duration(350)}
                 style={styles.sectionCard}
               >
-                <Text style={styles.sectionTitle}>{t('Barbers')}</Text>
+                <Text style={styles.sectionTitle}>{t('Gallery', 'Gallery')}</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.staffList}
+                  contentContainerStyle={styles.galleryList}
                 >
-                  {shop.staff.map((member) => (
-                    <Pressable
-                      key={member._id}
-                      onPress={() =>
-                        router.push({
-                          pathname: `/booking/${shop._id}`,
-                          params: { presetStaffId: member._id },
-                        })
-                      }
-                      style={styles.staffCard}
-                    >
-                      <Image
-                        source={{
-                          uri:
-                            member.photo ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              member.name
-                            )}&background=212127&color=F4F4F5`,
-                        }}
-                        style={styles.staffAvatar}
-                      />
-                      <Text style={styles.staffName} numberOfLines={1}>
-                        {member.name}
-                      </Text>
-                      <Text style={styles.staffRole} numberOfLines={1}>
-                        {member.role || 'Master'}
-                      </Text>
-                      <View style={styles.staffRatingRow}>
-                        <Ionicons name="star" size={11} color="#D4AF5A" />
-                        <Text style={styles.staffRatingText}>
-                          {Number(member.rating || 5.0).toFixed(1)}
-                        </Text>
-                      </View>
-                    </Pressable>
+                  {shop.images.map((imgUrl, idx) => (
+                    <Image
+                      key={idx}
+                      source={{ uri: imgUrl }}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
                   ))}
                 </ScrollView>
               </Animated.View>
             )}
 
-            {shop.workingHours?.length > 0 && (
+            {/* Meet the Team Section (Specialists / Barbers) */}
+            {Array.isArray(shop.staff) && shop.staff.length > 0 && (
               <Animated.View
-                entering={FadeInDown.delay(200).duration(350)}
+                entering={FadeInDown.delay(160).duration(350)}
                 style={styles.sectionCard}
               >
-                <Text style={styles.sectionTitle}>{t('WorkingHours')}</Text>
-                {shop.workingHours.map((wh, idx) => (
-                  <View key={idx} style={styles.hoursRow}>
-                    <Text style={styles.hoursDays}>
-                      {(wh.days || []).map((d) => t(`days.${d}`, d)).join(', ')}
-                    </Text>
-                    <Text style={styles.hoursTime}>
-                      {wh.from} – {wh.to}
-                    </Text>
-                  </View>
-                ))}
+                <Text style={styles.sectionTitle}>{t('MeetTheTeam', 'Meet the Team')}</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.teamList}
+                >
+                  {shop.staff.map((member) => (
+                    <Pressable
+                      key={member._id}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') {
+                          Haptics.selectionAsync().catch(() => {});
+                        }
+                        router.push({
+                          pathname: `/booking/${shop._id}`,
+                          params: { presetStaffId: member._id },
+                        });
+                      }}
+                      style={styles.teamMember}
+                    >
+                      <View style={styles.avatarWrap}>
+                        <Image
+                          source={{
+                            uri:
+                              member.photo ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                member.name || 'Barber'
+                              )}&background=1A1A1F&color=D4AF5A`,
+                          }}
+                          style={styles.avatar}
+                        />
+                        {member.rating && (
+                          <View style={styles.avatarRatingBadge}>
+                            <Text style={styles.avatarRatingText}>
+                              ⭐ {Number(member.rating).toFixed(1)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.memberName} numberOfLines={1}>
+                        {member.name}
+                      </Text>
+                      {member.title && (
+                        <Text style={styles.memberRole} numberOfLines={1}>
+                          {member.title}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </Animated.View>
             )}
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      {/* Floating Bottom Booking Bar */}
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: Math.max(insets.bottom, 12) + 4 },
+        ]}
+      >
         <Pressable
           onPress={() => {
-            if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            }
             router.push(`/booking/${shop._id}`);
           }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={({ pressed }) => [
             styles.bookCtaBtn,
             pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
           ]}
         >
-          <Text style={styles.bookCtaText}>✂️  {t('BookNow')}</Text>
+          <Text style={styles.bookCtaText}>✂️  {t('BookNow', 'Book Now')}</Text>
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#0A0A0C', // var(--color-bg)
   },
   loaderContainer: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#0A0A0C',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  notFoundText: {
+    color: '#9C9CA6',
+    fontFamily: FONTS.bodyRegular,
+    fontSize: 14,
+    marginTop: 16,
+  },
   heroBox: {
-    height: 240,
+    height: 288, // matching h-72 from web
     width: '100%',
     position: 'relative',
+    backgroundColor: '#1A1A1F',
   },
   heroImage: {
     width: '100%',
     height: '100%',
   },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 10, 12, 0.45)',
+  },
   heroTopActions: {
     position: 'absolute',
-    top: 48,
     left: 16,
     right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   circleBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(10, 10, 12, 0.72)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   bodyContainer: {
-    marginTop: -20,
+    marginTop: -24, // -mt-6 from web
+    position: 'relative',
+    zIndex: 10,
   },
   tabletColumns: {
     flexDirection: 'row',
@@ -346,208 +436,244 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   tabletLeftCol: {
-    flex: 3,
-  },
-  tabletRightCol: {
-    flex: 2,
+    flex: 1,
   },
   infoCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#131317', // var(--color-surface)
     borderRadius: 18,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#27272E', // var(--color-border-soft)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    gap: 12,
   },
   shopTitle: {
-    color: COLORS.text,
-    fontFamily: FONTS.displaySemiBold,
-    fontSize: 22,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 10,
+    color: '#F4F4F5', // var(--color-text)
+    fontFamily: FONTS.displayBold,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   shopDescription: {
-    color: COLORS.textMuted,
+    color: '#9C9CA6', // var(--color-text-muted)
     fontFamily: FONTS.bodyRegular,
-    fontSize: 13.5,
-    lineHeight: 19,
-    marginBottom: 12,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginTop: 4,
   },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.surface2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    backgroundColor: 'rgba(240, 184, 76, 0.12)',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(240, 184, 76, 0.25)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   ratingValue: {
-    color: COLORS.text,
+    color: '#F0B84C', // warning gold
     fontFamily: FONTS.bodyBold,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   reviewsCount: {
-    color: COLORS.textMuted,
+    color: '#64646D',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 12,
+    fontSize: 11,
+  },
+  metaDivider: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#27272E',
+    gap: 8,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 6,
+  },
+  metaRowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metaRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   metaText: {
-    color: COLORS.textMuted,
+    color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 13.5,
+    fontSize: 12.5,
+  },
+  underlineText: {
+    textDecorationLine: 'underline',
     flex: 1,
   },
+  phoneText: {
+    fontFamily: FONTS.bodySemiBold,
+    color: '#D4AF5A',
+  },
   sectionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    marginBottom: 14,
   },
   sectionTitle: {
-    color: COLORS.text,
+    color: '#F4F4F5',
     fontFamily: FONTS.displaySemiBold,
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 10,
+    letterSpacing: -0.2,
   },
-  serviceRow: {
+  servicesList: {
+    gap: 10,
+  },
+  serviceCard: {
+    backgroundColor: '#131317',
+    borderRadius: 14,
+    padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderSoft,
+    borderWidth: 1,
+    borderColor: '#27272E',
   },
   serviceName: {
-    color: COLORS.text,
+    color: '#F4F4F5',
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   serviceDuration: {
-    color: COLORS.textMuted,
+    color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11.5,
+    marginTop: 3,
   },
-  servicePriceRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  pricePill: {
+    backgroundColor: 'rgba(212, 175, 90, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 90, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  servicePrice: {
-    color: COLORS.accent,
+  pricePillText: {
+    color: '#D4AF5A',
     fontFamily: FONTS.bodyBold,
+    fontSize: 12.5,
     fontWeight: '700',
-    fontSize: 14,
   },
-  staffList: {
-    gap: 12,
+  galleryList: {
+    gap: 10,
+    paddingBottom: 4,
   },
-  staffCard: {
+  galleryImage: {
     width: 112,
-    backgroundColor: COLORS.surface2,
-    borderRadius: 16,
-    padding: 12,
+    height: 112,
+    borderRadius: 12,
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+  },
+  teamList: {
+    gap: 16,
+    paddingBottom: 4,
+  },
+  teamMember: {
+    width: 80,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
   },
-  staffAvatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    marginBottom: 8,
-    backgroundColor: COLORS.surface3,
+  avatarWrap: {
+    position: 'relative',
+    width: 64,
+    height: 64,
   },
-  staffName: {
-    color: COLORS.text,
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#27272E',
+    backgroundColor: '#1A1A1F',
+  },
+  avatarRatingBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#1A1A1F',
+    borderWidth: 1,
+    borderColor: '#27272E',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 999,
+  },
+  avatarRatingText: {
+    color: '#F0B84C',
+    fontSize: 9.5,
     fontFamily: FONTS.bodyBold,
     fontWeight: '700',
-    fontSize: 13.5,
   },
-  staffRole: {
-    color: COLORS.textMuted,
-    fontFamily: FONTS.bodyRegular,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  staffRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  staffRatingText: {
-    color: COLORS.text,
-    fontFamily: FONTS.bodyBold,
+  memberName: {
+    color: '#F4F4F5',
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
   },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  hoursDays: {
-    color: COLORS.textMuted,
+  memberRole: {
+    color: '#9C9CA6',
     fontFamily: FONTS.bodyRegular,
-    fontSize: 13,
-    flex: 1,
-  },
-  hoursTime: {
-    color: COLORS.text,
-    fontFamily: FONTS.bodyBold,
-    fontWeight: '700',
-    fontSize: 13,
+    fontSize: 10.5,
+    marginTop: 1,
+    textAlign: 'center',
   },
   bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1.5,
-    borderTopColor: COLORS.border,
+    backgroundColor: 'rgba(10, 10, 12, 0.92)',
+    borderTopWidth: 1,
+    borderTopColor: '#27272E',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    zIndex: 30,
   },
   bookCtaBtn: {
-    backgroundColor: COLORS.accent,
-    height: 52,
+    backgroundColor: '#D4AF5A',
+    height: 50,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.accent,
+    shadowColor: '#D4AF5A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 6,
   },
   bookCtaText: {
-    color: COLORS.bg,
+    color: '#0A0A0C',
     fontFamily: FONTS.bodyBold,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
 });

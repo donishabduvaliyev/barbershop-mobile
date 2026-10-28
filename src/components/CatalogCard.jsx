@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS, SPRING_PRESETS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
 import { normalizeShopImageUrl } from '../utils/imageUtils';
+import { HeartIcon } from './HeartIcon';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -69,8 +70,8 @@ export const CatalogCard = ({ shop, style }) => {
           style={styles.favoriteBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons
-            name={isFavorited ? 'heart' : 'heart-outline'}
+          <HeartIcon
+            filled={isFavorited}
             size={16}
             color={isFavorited ? COLORS.danger : '#FFFFFF'}
           />

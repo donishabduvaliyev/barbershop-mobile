@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS, FONTS, SPRING_PRESETS } from '../theme/colors';
 import { useAppContext } from '../context/AppContext';
 import { normalizeShopImageUrl, DEFAULT_SHOP_IMAGES } from '../utils/imageUtils';
+import { HeartIcon } from './HeartIcon';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -85,8 +86,8 @@ export const ShopCard = ({ shop, index = 0, style }) => {
             style={styles.favoriteBtn}
             hitSlop={8}
           >
-            <Ionicons
-              name={isFavorited ? 'heart' : 'heart-outline'}
+            <HeartIcon
+              filled={isFavorited}
               size={18}
               color={isFavorited ? COLORS.danger : '#FFFFFF'}
             />
